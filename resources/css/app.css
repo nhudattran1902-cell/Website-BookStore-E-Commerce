@@ -1,0 +1,166 @@
+@import "tailwindcss";
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans:
+        "Instrument Sans", ui-sans-serif, system-ui, sans-serif,
+        "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+        "Noto Color Emoji";
+}
+
+/* Minimal Custom CSS */
+body {
+    font-family: "Inter", sans-serif;
+}
+
+.brand-logo {
+    width: 2.25rem;
+    height: 2.25rem;
+    object-fit: contain;
+}
+
+@media (min-width: 992px) {
+    .navbar-expand-lg .navbar-collapse {
+        display: flex !important;
+        flex-basis: auto;
+        visibility: visible !important;
+    }
+}
+
+/* Tailwind's .collapse utility can override Bootstrap's collapse state. */
+.navbar-collapse.show {
+    display: block !important;
+    visibility: visible !important;
+}
+
+@media (max-width: 991.98px) {
+    .navbar-collapse {
+        padding-top: 1rem;
+    }
+
+    .navbar-nav {
+        gap: 0.25rem;
+    }
+}
+
+.text-theme {
+    color: #f75c61;
+}
+.bg-theme-light {
+    background-color: #fdf6f6;
+}
+
+/* Chỉnh lại form search trên Header */
+.search-bar {
+    background-color: #f3f3f3;
+    border: none;
+    border-radius: 5px;
+}
+
+/* Hover effect cho card sách */
+.book-card {
+    transition: transform 0.2s;
+    border: none;
+}
+.book-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+}
+
+/* Màu nền riêng cho Featured Categories */
+.cat-bg-1 {
+    background-color: #f4e6fa;
+}
+.cat-bg-2 {
+    background-color: #fdf2e3;
+}
+.cat-bg-3 {
+    background-color: #fae6e7;
+}
+.cat-bg-4 {
+    background-color: #e3f4f4;
+}
+.cat-bg-5 {
+    background-color: #fcebeb;
+}
+
+/* Custom nav tabs for featured books */
+.custom-tabs .nav-link {
+    color: #6c757d;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-weight: 500;
+}
+.custom-tabs .nav-link.active {
+    color: #000;
+    border-bottom: 2px solid #000;
+    background: none;
+}
+
+/* =========================================
+           HIỆU ỨNG LOADING SPINNER & XỬ LÝ ẢNH
+           ========================================= */
+.img-wrapper {
+    position: relative;
+    width: 100%;
+    background-color: #f3f3f3;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Tỷ lệ khung hình chuẩn cho các loại ảnh */
+.ratio-book {
+    aspect-ratio: 2 / 3;
+} /* Sách thông thường */
+.ratio-deal {
+    aspect-ratio: 15 / 22;
+} /* Sách phần Deal */
+.ratio-author {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    margin: 0 auto;
+}
+
+/* Vòng xoay (Spinner) xám */
+.loading-spinner {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border: 3px solid #e0e0e0;
+    border-top: 3px solid #888888;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 1;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Cài đặt cho ảnh */
+.lazy-img {
+    opacity: 0;
+    transition: opacity 0.4s ease-in-out;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 2;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+/* Class được JS thêm vào khi tải xong */
+.lazy-img.loaded {
+    opacity: 1;
+}
