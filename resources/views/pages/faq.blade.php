@@ -1,76 +1,95 @@
 @extends('layouts.app')
-@section('title', 'Câu hỏi thường gặp (FAQ) - BOOK & BOX')
+
+@section('title', 'Câu Hỏi Thường Gặp (FAQ) - BOOK & BOX')
+
 @section('content')
-<div class="container py-5" style="max-width: 800px;">
-    <h1 class="fw-bold mb-4">Câu hỏi thường gặp (FAQ)</h1>
-    <p class="text-muted mb-4">Giải đáp các thắc mắc phổ biến của khách hàng khi mua sắm tại BOOK & BOX.</p>
-
-    <div class="accordion" id="faqAccordion">
-        <div class="accordion-item">
-            <h2 class="accordion-header" id="headingOne">
-                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                    Làm thế nào để tôi đặt mua sách tại BOOK & BOX?
-                </button>
-            </h2>
-            <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#faqAccordion">
-                <div class="accordion-body">
-                    Bạn chỉ cần tìm kiếm hoặc chọn cuốn sách ưng ý, bấm <strong>Thêm vào giỏ hàng</strong>, kiểm tra giỏ hàng và tiến hành thanh toán bằng cách điền thông tin người nhận và chọn phương thức thanh toán.
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="text-center mb-5">
+                    <span class="badge bg-danger rounded-pill px-3 py-2 mb-2">Hỗ Trợ Khách Hàng</span>
+                    <h2 class="fw-bold">Câu Hỏi Thường Gặp</h2>
+                    <p class="text-muted">Giải đáp các thắc mắc về đơn hàng, vận chuyển và đổi trả tại BOOK & BOX</p>
                 </div>
-            </div>
-        </div>
 
-        <div class="accordion-item">
-            <h2 class="accordion-header" id="headingTwo">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                    Thời gian giao hàng mất bao lâu?
-                </button>
-            </h2>
-            <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#faqAccordion">
-                <div class="accordion-body">
-                    Thời gian giao hàng thông thường từ 1-2 ngày đối với nội thành TP.HCM, và 2-5 ngày đối với các tỉnh thành khác. Bạn có thể xem chi tiết tại <a href="{{ route('pages.shipping') }}">Chính sách vận chuyển</a>.
-                </div>
-            </div>
-        </div>
+                {{-- Container Accordion FAQ --}}
+                <div class="accordion shadow-sm rounded-4 overflow-hidden" id="faqAccordion">
 
-        <div class="accordion-item">
-            <h2 class="accordion-header" id="headingThree">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                    Tôi có thể đọc thử sách trước khi mua không?
-                </button>
-            </h2>
-            <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#faqAccordion">
-                <div class="accordion-body">
-                    Có! Đối với những cuốn sách có hỗ trợ đọc thử, bạn có thể bấm nút <strong>Đọc ngay</strong> tại trang chi tiết sách để xem các trang mẫu miễn phí.
-                </div>
-            </div>
-        </div>
+                    {{-- Câu 1 --}}
+                    <div class="accordion-item border-0 border-bottom">
+                        <h2 class="accordion-header" id="headingOne">
+                            <button class="accordion-button fw-bold py-3" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                <i class="bi bi-question-circle text-danger me-2"></i> Làm thế nào để tôi đặt hàng trực
+                                tuyến?
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne"
+                            data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted">
+                                Bạn chỉ cần tìm kiếm cuốn sách yêu thích, bấm <strong>"Thêm vào giỏ hàng"</strong> hoặc
+                                <strong>"Mua ngay"</strong>, sau đó điền thông tin giao hàng và chọn phương thức thanh toán
+                                phù hợp (COD, MoMo, VNPay) để hoàn tất đơn hàng.
+                            </div>
+                        </div>
+                    </div>
 
-        <div class="accordion-item">
-            <h2 class="accordion-header" id="headingFour">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
-                    Tôi có được kiểm tra hàng trước khi nhận không?
-                </button>
-            </h2>
-            <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#faqAccordion">
-                <div class="accordion-body">
-                    Bạn được phép đồng kiểm bên ngoài kiện hàng cùng nhân viên giao vận. Nếu sách có dấu hiệu hư hỏng do vận chuyển hoặc giao sai sách, bạn có thể từ chối nhận hàng hoặc yêu cầu đổi trả theo <a href="{{ route('pages.return-policy') }}">Chính sách đổi trả</a>.
-                </div>
-            </div>
-        </div>
+                    {{-- Câu 2 --}}
+                    <div class="accordion-item border-0 border-bottom">
+                        <h2 class="accordion-header" id="headingTwo">
+                            <button class="accordion-button collapsed fw-bold py-3" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                <i class="bi bi-truck text-danger me-2"></i> Thời gian và chi phí giao hàng là bao nhiêu?
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo"
+                            data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted">
+                                Thời gian giao hàng nội thành TPHCM và Hà Nội từ 1-2 ngày, các tỉnh thành khác từ 3-5 ngày
+                                làm việc. Đơn hàng từ 250.000đ sẽ được miễn phí vận chuyển trên toàn quốc.
+                            </div>
+                        </div>
+                    </div>
 
-        <div class="accordion-item">
-            <h2 class="accordion-header" id="headingFive">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
-                    Tôi cần hỗ trợ thêm thì liên hệ bằng cách nào?
-                </button>
-            </h2>
-            <div id="collapseFive" class="accordion-collapse collapse" aria-labelledby="headingFive" data-bs-parent="#faqAccordion">
-                <div class="accordion-body">
-                    Bạn có thể liên hệ trực tiếp qua hotline <strong>+84 767 417 206</strong>, gửi thư đến <strong>nhudattran1902@gmail.com</strong> hoặc để lại lời nhắn tại trang <a href="{{ route('pages.contact') }}">Liên hệ</a>.
+                    {{-- Câu 3 --}}
+                    <div class="accordion-item border-0 border-bottom">
+                        <h2 class="accordion-header" id="headingThree">
+                            <button class="accordion-button collapsed fw-bold py-3" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                <i class="bi bi-arrow-counterclockwise text-danger me-2"></i> Chính sách đổi trả sách hư
+                                hỏng như thế nào?
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree"
+                            data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted">
+                                BOOK & BOX hỗ trợ đổi trả miễn phí trong vòng 7 ngày nếu sách bị lỗi in ấn, rách bìa hoặc hư
+                                hỏng trong quá trình vận chuyển. Quý khách vui lòng giữ lại hóa đơn và quay video khi mở
+                                hàng.
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Câu 4 --}}
+                    <div class="accordion-item border-0">
+                        <h2 class="accordion-header" id="headingFour">
+                            <button class="accordion-button collapsed fw-bold py-3" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                                <i class="bi bi-credit-card text-danger me-2"></i> Tôi có thể thanh toán bằng những hình
+                                thức nào?
+                            </button>
+                        </h2>
+                        <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour"
+                            data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted">
+                                Hệ thống hỗ trợ thanh toán khi nhận hàng (COD), Ví điện tử MoMo và Cổng thanh toán quét mã
+                                QR VNPay.
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
     </div>
-</div>
 @endsection
-

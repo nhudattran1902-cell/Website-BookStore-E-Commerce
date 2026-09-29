@@ -49,4 +49,8 @@ class NguoiDung extends Authenticatable
             'id_vai_tro'
         );
     }
+    public function danhGia(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(DanhGiaSach::class, 'id_nguoi_dung');
+    }
 }

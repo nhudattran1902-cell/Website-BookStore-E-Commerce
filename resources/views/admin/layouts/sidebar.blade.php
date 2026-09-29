@@ -89,6 +89,22 @@
                         <span>Người dùng</span>
                     </a>
                 </li>
+                <li class="sidebar-menu-item">
+                    <a href="{{ route('admin.reviews.index') }}"
+                        class="sidebar-menu-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"
+                        title="Đánh giá">
+                        <i class="bi bi-star"></i>
+                        <span>Đánh giá</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a href="{{ route('admin.transactions.index') }}"
+                        class="sidebar-menu-link {{ request()->routeIs('admin.transactions.*') ? 'active' : '' }}"
+                        title="Giao dịch">
+                        <i class="bi bi-credit-card"></i>
+                        <span>Giao dịch</span>
+                    </a>
+                </li>
             </ul>
         </div>
 

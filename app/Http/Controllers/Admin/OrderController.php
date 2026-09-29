@@ -4,38 +4,39 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\DonHang;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
     // Hiển thị danh sách đơn hàng
-    public function index(Request $request)
+    public function index(Request $request): View
     {
         $query = DonHang::with(['nguoiDung'])->orderBy('id', 'desc');
 
-        // Lọc theo trạng thái đơn hàng nếu người dùng chọn
         if ($request->filled('trang_thai')) {
             $query->where('trang_thai', $request->trang_thai);
         }
 
-        $danhSachDonHang = $query->paginate(10);
+        $orders = $query->paginate(10);
 
-        return view('admin.orders.index', compact('danhSachDonHang'));
+        return view('admin.orders.index', compact('orders'));
     }
 
-    // Xem chi tiết đơn hàng
-    public function show($id)
+    // Xem chi tiết đơn hàng (Đã sửa tên biến truyền sang view thành $order)
+    public function show(int $id): View
     {
-        $donHang = DonHang::with(['nguoiDung', 'chiTietDonHang.sach', 'thanhToan'])->findOrFail($id);
-        
-        return view('admin.orders.show', compact('donHang'));
+        $order = DonHang::with(['nguoiDung', 'chiTietDonHang.sach', 'thanhToan'])->findOrFail($id);
+
+        return view('admin.orders.show', compact('order'));
     }
 
     // Cập nhật trạng thái giao hàng
-    public function updateStatus(Request $request, $id)
+    public function updateStatus(Request $request, int $id): RedirectResponse
     {
         $request->validate([
-            'trang_thai' => 'required|in:cho_xu_ly,dang_xu_ly,dang_giao,hoan_thanh,da_huy'
+            'trang_thai' => 'required|in:cho_xu_ly,dang_xu_ly,dang_giao,hoan_thanh,da_huy',
         ]);
 
         $donHang = DonHang::findOrFail($id);

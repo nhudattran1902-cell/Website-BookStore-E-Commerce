@@ -10,6 +10,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             AllTableSeeder::class, // <-- Gọi AllTableSeeder tại đây
+            MangaComicSeeder::class, // Nối seeder bộ truyện mới vào luồng seed chính
         ]);
     }
 }

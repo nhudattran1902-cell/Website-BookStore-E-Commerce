@@ -32,12 +32,16 @@
                                 <th>Tiêu đề sách</th>
                                 <th>Thể loại</th>
                                 <th>Giá bán</th>
+                                <th>Tồn kho</th>
                                 <th>Trạng thái</th>
                                 <th class="text-end pe-3">Hành động</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($books as $book)
+                                @php
+                                    $soLuongTon = $book->khoHang->so_luong ?? ($book->khoHang->so_luong_ton ?? 0);
+                                @endphp
                                 <tr>
                                     <td class="ps-3 fw-bold">#{{ $book->id }}</td>
                                     <td>
@@ -46,7 +50,7 @@
                                             style="width: 48px; height: 64px; object-fit: cover;">
                                     </td>
                                     <td>
-                                        <div class="fw-bold text-white">{{ $book->tieu_de }}</div>
+                                        <div class="fw-bold text-dark">{{ $book->tieu_de }}</div>
                                         <small class="text-muted">ISBN: {{ $book->ma_isbn ?? 'Chưa cập nhật' }}</small>
                                     </td>
                                     <td>
@@ -58,6 +62,17 @@
                                         {{ number_format($book->gia_ban, 0, ',', '.') }} đ
                                     </td>
                                     <td>
+                                        @if ($soLuongTon > 0)
+                                            <span class="badge bg-success fs-6 fw-normal">
+                                                <i class="bi bi-box-seam me-1"></i>{{ $soLuongTon }} cuốn
+                                            </span>
+                                        @else
+                                            <span class="badge bg-danger fs-6 fw-bold">
+                                                <i class="bi bi-exclamation-triangle-fill me-1"></i>Hết hàng (0)
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td>
                                         @if ($book->dang_hoat_dong)
                                             <span class="badge bg-success">Đang bán</span>
                                         @else
@@ -65,24 +80,41 @@
                                         @endif
                                     </td>
                                     <td class="text-end pe-3">
-                                        <a href="{{ route('admin.books.edit', $book->id) }}"
-                                            class="btn btn-sm btn-outline-info me-1">
-                                            <i class="bi bi-pencil-square"></i> Sửa
-                                        </a>
-                                        <form action="{{ route('admin.books.destroy', $book->id) }}" method="POST"
-                                            class="d-inline"
-                                            onsubmit="return confirm('Bạn có chắc muốn xóa cuốn sách này?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                <i class="bi bi-trash"></i> Xóa
-                                            </button>
-                                        </form>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            {{-- Nút Quản lý Trang đọc thử (Bổ sung mới) --}}
+                                            <a href="{{ route('admin.books.pages.index', $book->id) }}"
+                                                class="btn btn-outline-info" title="Quản lý trang đọc thử">
+                                                <i class="bi bi-book"></i> Đọc thử
+                                            </a>
+
+                                            {{-- Nút Nhập kho --}}
+                                            <a href="{{ route('admin.inventory.index', ['id_sach' => $book->id]) }}"
+                                                class="btn btn-outline-warning" title="Cập nhật kho">
+                                                <i class="bi bi-box-arrow-in-down"></i> Kho
+                                            </a>
+
+                                            {{-- Nút Chỉnh sửa sách --}}
+                                            <a href="{{ route('admin.books.edit', $book->id) }}"
+                                                class="btn btn-outline-primary" title="Sửa thông tin sách">
+                                                <i class="bi bi-pencil-square"></i> Sửa
+                                            </a>
+
+                                            {{-- Nút Xóa sách --}}
+                                            <form action="{{ route('admin.books.destroy', $book->id) }}" method="POST"
+                                                class="d-inline"
+                                                onsubmit="return confirm('Bạn có chắc muốn xóa cuốn sách này?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-outline-danger" title="Xóa sách">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center py-4 text-muted">
+                                    <td colspan="8" class="text-center py-4 text-muted">
                                         Chưa có dữ liệu sách nào trong cơ sở dữ liệu.
                                     </td>
                                 </tr>

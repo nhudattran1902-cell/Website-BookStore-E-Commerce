@@ -1,23 +1,27 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\BookController;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\PageController;
-use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\AdminBookController;
-use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\OrderController;
-use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\AdminReviewController;
 use App\Http\Controllers\Admin\AuthorController;
-use App\Http\Controllers\Admin\PublisherController;
-use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\BookPageController;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\InventoryController;
+use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\PublisherController;
+use App\Http\Controllers\Admin\TransactionController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BookController;
+use App\Http\Controllers\ChatController;
+use App\Http\Controllers\Customer\CartController;
 use App\Http\Controllers\Customer\CheckoutController;
 use App\Http\Controllers\Customer\OrderController as CustomerOrderController;
-use App\Http\Controllers\Customer\CartController;
 use App\Http\Controllers\Customer\ProfileController;
+use App\Http\Controllers\Customer\ReviewController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\PageController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,6 +47,9 @@ Route::get('/shipping', [PageController::class, 'shipping'])->name('pages.shippi
 Route::get('/return-policy', [PageController::class, 'returnPolicy'])->name('pages.return-policy');
 Route::get('/faq', [PageController::class, 'faq'])->name('pages.faq');
 
+// Live Chat phía Khách hàng (Hỗ trợ cả khách vãng lai qua session_id)
+Route::get('/chat/messages', [ChatController::class, 'getCustomerMessages'])->name('chat.messages');
+Route::post('/chat/send', [ChatController::class, 'sendCustomerMessage'])->name('chat.send');
 
 /*
 |--------------------------------------------------------------------------
@@ -58,7 +65,6 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-
 /*
 |--------------------------------------------------------------------------
 | 3. ADMIN MANAGEMENT ROUTES (Yêu cầu đăng nhập + quyền Admin)
@@ -69,44 +75,56 @@ Route::prefix('admin')
     ->name('admin.')
     ->group(function () {
 
-    // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        // Dashboard
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Quản lý Sách — loại bỏ 'show' vì AdminBookController không có show()
-    Route::resource('books', AdminBookController::class)
-        ->except(['show']);
+        // Quản lý Sách
+        Route::resource('books', AdminBookController::class)
+            ->except(['show']);
 
-    // Quản lý Trang đọc thử của Sách (Preview Pages)
-    Route::get('/books/{bookId}/pages', [BookPageController::class, 'index'])->name('books.pages.index');
-    Route::post('/books/{bookId}/pages', [BookPageController::class, 'store'])->name('books.pages.store');
-    Route::put('/books/{bookId}/pages/{pageId}', [BookPageController::class, 'update'])->name('books.pages.update');
-    Route::delete('/books/{bookId}/pages/{pageId}', [BookPageController::class, 'destroy'])->name('books.pages.destroy');
+        // Quản lý Trang đọc thử của Sách (Preview Pages)
+        Route::get('/books/{bookId}/pages', [BookPageController::class, 'index'])->name('books.pages.index');
+        Route::post('/books/{bookId}/pages', [BookPageController::class, 'store'])->name('books.pages.store');
+        Route::put('/books/{bookId}/pages/{pageId}', [BookPageController::class, 'update'])->name('books.pages.update');
+        Route::delete('/books/{bookId}/pages/{pageId}', [BookPageController::class, 'destroy'])->name('books.pages.destroy');
 
-    // Quản lý Thể loại — chỉ cần index, store, update, destroy
-    Route::resource('categories', CategoryController::class)
-        ->only(['index', 'store', 'update', 'destroy']);
+        // Quản lý Thể loại
+        Route::resource('categories', CategoryController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
 
-    // Quản lý Tác giả
-    Route::resource('authors', AuthorController::class)
-        ->only(['index', 'store', 'update', 'destroy']);
+        // Quản lý Tác giả
+        Route::resource('authors', AuthorController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
 
-    // Quản lý Nhà xuất bản
-    Route::resource('publishers', PublisherController::class)
-        ->only(['index', 'store', 'update', 'destroy']);
+        // Quản lý Nhà xuất bản
+        Route::resource('publishers', PublisherController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
 
-    // Quản lý Đơn hàng
-    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
-    Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
-    Route::put('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+        // Quản lý Đơn hàng
+        Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
+        Route::put('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
 
-    // Quản lý Kho hàng
-    Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
-    Route::put('/inventory/{id}', [InventoryController::class, 'update'])->name('inventory.update');
+        // Quản lý Kho hàng
+        Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
+        Route::put('/inventory/{id}', [InventoryController::class, 'update'])->name('inventory.update');
 
-    // Quản lý Người dùng
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-});
+        // Quản lý Người dùng
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
 
+        // Quản lý Đánh giá
+        Route::get('/reviews', [AdminReviewController::class, 'index'])->name('reviews.index');
+        Route::patch('/reviews/{id}/toggle', [AdminReviewController::class, 'toggleApprove'])->name('reviews.toggle');
+        Route::delete('/reviews/{id}', [AdminReviewController::class, 'destroy'])->name('reviews.destroy');
+
+        // Quản lý Live Chat
+        Route::get('/chat', [ChatController::class, 'adminIndex'])->name('chat.index');
+        Route::post('/chat/reply', [ChatController::class, 'adminReply'])->name('chat.reply');
+
+        // Quản lý Giao dịch Thanh toán
+        Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions.index');
+        Route::get('/transactions/{id}', [TransactionController::class, 'show'])->name('transactions.show');
+    });
 
 /*
 |--------------------------------------------------------------------------
@@ -128,8 +146,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/process', [CheckoutController::class, 'process'])->name('process');
         Route::get('/success/{maDonHang}', [CheckoutController::class, 'success'])->name('success');
     });
-});
 
+    // Gửi đánh giá sách
+    Route::post('/books/{bookId}/reviews', [ReviewController::class, 'store'])->name('books.reviews.store');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -143,3 +163,4 @@ Route::middleware(['auth'])->prefix('user')->name('customer.')->group(function (
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'changePassword'])->name('profile.password');
 });
+    

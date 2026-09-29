@@ -1,4 +1,4 @@
-//
+
 document.addEventListener("DOMContentLoaded", function () {
     // Lấy tất cả các ảnh có class lazy-img
     const images = document.querySelectorAll(".lazy-img");

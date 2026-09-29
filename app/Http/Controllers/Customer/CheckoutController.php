@@ -33,16 +33,17 @@ class CheckoutController extends Controller
             $gia = $item->sach->gia_khuyen_mai ?? $item->sach->gia_ban;
             return $gia * $item->so_luong;
         });
-
-        return view('customer.checkout', compact('cartItems', 'tongTien'));
+        $total = $tongTien;
+        return view('customer.checkout', compact('cartItems', 'tongTien', 'total'));
     }
 
     // 2. Xử lý Đặt hàng (Lưu thông tin vào CSDL)
     public function process(Request $request)
     {
+        // Đồng bộ tên field validate khớp với checkout.blade.php
         $request->validate([
-            'ho_ten'                 => 'required|string|max:255',
-            'so_dien_thoai'          => 'required|string|max:20',
+            'ten_nguoi_nhan'        => 'required|string|max:255',
+            'sdt_nguoi_nhan'        => 'required|string|max:20',
             'dia_chi_giao_hang'      => 'required|string',
             'phuong_thuc_thanh_toan' => 'required|in:COD,MoMo,VNPay',
             'ghi_chu'                => 'nullable|string'
@@ -52,7 +53,7 @@ class CheckoutController extends Controller
         $gioHang = GioHang::with(['chiTietGioHang.sach'])->where('id_nguoi_dung', $userId)->first();
 
         if (!$gioHang || $gioHang->chiTietGioHang->isEmpty()) {
-            return redirect()->route('cart.index');
+            return redirect()->route('cart.index')->with('error', 'Giỏ hàng của bạn đang trống!');
         }
 
         $cartItems = $gioHang->chiTietGioHang;
@@ -88,8 +89,8 @@ class CheckoutController extends Controller
                 'thanh_tien'        => $tongTien,
                 'trang_thai'        => 'cho_xu_ly',
                 'dia_chi_giao_hang' => $request->dia_chi_giao_hang
-                    . ' (SĐT: ' . $request->so_dien_thoai
-                    . ' - Người nhận: ' . $request->ho_ten . ')',
+                    . ' (SĐT: ' . $request->sdt_nguoi_nhan
+                    . ' - Người nhận: ' . $request->ten_nguoi_nhan . ')',
                 'ghi_chu'           => $request->ghi_chu
             ]);
 
@@ -133,11 +134,15 @@ class CheckoutController extends Controller
     // 3. Trang đặt hàng thành công
     public function success($maDonHang)
     {
-        // Kiểm tra đơn hàng thuộc về user hiện tại
-        $donHang = DonHang::where('ma_don_hang', $maDonHang)
+        // Kiểm tra đơn hàng thuộc về user hiện tại kèm theo thông tin chi tiết & thanh toán
+        $donHang = DonHang::with(['chiTietDonHang.sach', 'thanhToan', 'nguoiDung'])
+            ->where('ma_don_hang', $maDonHang)
             ->where('id_nguoi_dung', Auth::id())
             ->firstOrFail();
 
-        return view('customer.checkout-success', compact('donHang'));
+        // Gán alias $order bằng $donHang để khớp với view checkout-success.blade.php
+        $order = $donHang;
+
+        return view('customer.checkout-success', compact('donHang', 'order'));
     }
 }

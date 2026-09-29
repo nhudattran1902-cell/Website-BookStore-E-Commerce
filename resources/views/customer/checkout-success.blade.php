@@ -1,23 +1,112 @@
 @extends('layouts.app')
 
-@section('title', 'Đặt hàng thành công - BOOK & BOX')
+@section('title', 'Đặt hàng thành công - Hóa đơn #' . $order->ma_don_hang . ' - BOOK & BOX')
 
 @section('content')
-    <div class="container py-5 text-center">
-        <div class="card border-0 shadow-sm p-5 mx-auto" style="max-width: 600px;">
-            <i class="bi bi-check-circle-fill text-success display-1 mb-3"></i>
-            <h2 class="fw-bold mb-2">Đặt hàng thành công!</h2>
-            <p class="text-muted">Cảm ơn bạn đã mua sách tại BOOK & BOX.</p>
+<div class="container py-5">
+    {{-- Thanh nút hành động --}}
+    <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
+        <a href="{{ route('home') }}" class="btn btn-outline-secondary rounded-pill">
+            <i class="bi bi-arrow-left me-1"></i> Tiếp tục mua sắm
+        </a>
+        <button onclick="window.print()" class="btn btn-dark rounded-pill px-4">
+            <i class="bi bi-printer-fill me-2"></i> In Hóa Đơn (Bill)
+        </button>
+    </div>
 
-            <div class="alert alert-light border my-4 text-start">
-                <p class="mb-1"><strong>Mã đơn hàng:</strong> {{ $donHang->ma_don_hang }}</p>
-                <p class="mb-1"><strong>Tổng tiền:</strong> {{ number_format($donHang->thanh_tien, 0, ',', '.') }} đ</p>
-                <p class="mb-0"><strong>Trạng thái:</strong> <span class="badge bg-warning text-dark">Chờ xử lý</span></p>
+    {{-- Khung Hóa Đơn Điện Tử --}}
+    <div class="card border-0 shadow rounded-4 p-4 p-md-5 bg-white mx-auto" id="printableInvoice" style="max-width: 800px;">
+        <!-- Header Bill -->
+        <div class="row border-bottom pb-4 mb-4 align-items-center">
+            <div class="col-sm-6 mb-3 mb-sm-0">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="fw-bold fs-3 text-dark">BOOK</span>
+                    <span class="fw-bold fs-3 text-danger">BOX</span>
+                </div>
+                <small class="text-muted d-block">Hệ thống nhà sách trực tuyến BOOK & BOX</small>
+                <small class="text-muted d-block">Hotline: +84 767417206 | Website: bookbox.com</small>
             </div>
-
-            <div class="d-flex gap-2 justify-content-center">
-                <a href="{{ url('/books') }}" class="btn btn-primary px-4">Tiếp tục mua sách</a>
+            <div class="col-sm-6 text-sm-end">
+                <h4 class="fw-bold text-uppercase text-danger mb-1">Hóa Đơn Bán Hàng</h4>
+                <div class="fw-bold">Mã đơn: #{{ $order->ma_don_hang }}</div>
+                <small class="text-muted">Ngày đặt: {{ $order->ngay_tao }}</small>
             </div>
         </div>
+
+        <!-- Thông tin giao hàng & Thanh toán -->
+        <div class="row mb-4">
+            <div class="col-sm-6 mb-3 mb-sm-0">
+                <h6 class="fw-bold text-dark border-bottom pb-1">Thông Tin Khách Hàng:</h6>
+                <div class="fw-bold">{{ $order->ten_nguoi_nhan ?? $order->nguoiDung->ho_ten }}</div>
+                <div class="small text-muted mb-1">SĐT: {{ $order->sdt_nguoi_nhan ?? 'N/A' }}</div>
+                <div class="small text-muted">Địa chỉ: {{ $order->dia_chi_giao_hang }}</div>
+            </div>
+            <div class="col-sm-6 text-sm-end">
+                <h6 class="fw-bold text-dark border-bottom pb-1">Thanh Toán & Trạng Thái:</h6>
+                <div class="small mb-1">
+                    <strong>Phương thức:</strong> 
+                    <span class="badge bg-secondary">{{ $order->thanhToan->phuong_thuc_thanh_toan ?? 'COD' }}</span>
+                </div>
+                <div class="small">
+                    <strong>Trạng thái đơn:</strong> 
+                    <span class="badge bg-warning text-dark">Chờ xử lý</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bảng Sản phẩm -->
+        <div class="table-responsive mb-4">
+            <table class="table table-bordered align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-center" style="width: 50px;">#</th>
+                        <th>Tên cuốn sách</th>
+                        <th class="text-center">Đơn giá</th>
+                        <th class="text-center">Số lượng</th>
+                        <th class="text-end">Thành tiền</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($order->chiTietDonHang as $index => $item)
+                        <tr>
+                            <td class="text-center fw-bold">{{ $index + 1 }}</td>
+                            <td>
+                                <div class="fw-bold text-dark">{{ $item->sach->tieu_de }}</div>
+                                <small class="text-muted">ISBN: {{ $item->sach->ma_isbn ?? 'N/A' }}</small>
+                            </td>
+                            <td class="text-center">{{ number_format($item->don_gia, 0, ',', '.') }} đ</td>
+                            <td class="text-center fw-bold">{{ $item->so_luong }}</td>
+                            <td class="text-end fw-bold">{{ number_format($item->thanh_tien, 0, ',', '.') }} đ</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" class="text-end fw-bold">Giảm giá:</td>
+                        <td class="text-end text-muted">{{ number_format($order->so_tien_giam_gia ?? 0, 0, ',', '.') }} đ</td>
+                    </tr>
+                    <tr>
+                        <td colspan="4" class="text-end fw-bold fs-5">Tổng tiền thanh toán:</td>
+                        <td class="text-end fw-bold text-danger fs-5">{{ number_format($order->thanh_tien, 0, ',', '.') }} đ</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Lời cảm ơn -->
+        <div class="text-center border-top pt-4">
+            <p class="fw-bold mb-1 text-dark">Cảm ơn bạn đã tin tưởng và mua sách tại BOOK & BOX!</p>
+            <small class="text-muted">Mọi thắc mắc về hóa đơn xin vui lòng liên hệ bộ phận CSKH để được hỗ trợ.</small>
+        </div>
     </div>
+</div>
+
+<style>
+@media print {
+    body * { visibility: hidden; }
+    #printableInvoice, #printableInvoice * { visibility: visible; }
+    #printableInvoice { position: absolute; left: 0; top: 0; width: 100%; border: none !important; shadow: none !important; }
+    .d-print-none { display: none !important; }
+}
+</style>
 @endsection

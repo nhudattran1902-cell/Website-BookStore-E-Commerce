@@ -32,6 +32,19 @@
 
                         <!-- Giá bán từ cột gia_ban -->
                         <h5 class="fw-bold mb-0">${{ number_format($book->gia_ban, 2) }}</h5>
+
+                        @if ((int) $book->so_luong_ton > 0)
+                            <form action="{{ route('cart.add') }}" method="POST" class="mt-2">
+                                @csrf
+                                <input type="hidden" name="id_sach" value="{{ $book->id }}">
+                                <input type="hidden" name="so_luong" value="1">
+                                <button type="submit" class="btn btn-sm btn-dark w-100 rounded-0">Thêm vào giỏ</button>
+                            </form>
+                        @else
+                            <button type="button" class="btn btn-sm btn-danger w-100 rounded-0 mt-2" disabled>
+                                HẾT HÀNG
+                            </button>
+                        @endif
                     </div>
                 </div>
             </div>

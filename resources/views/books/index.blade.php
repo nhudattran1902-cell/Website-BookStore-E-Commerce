@@ -59,15 +59,25 @@
                                             <a href="{{ route('books.show', $book->id) }}"
                                                 class="text-dark text-decoration-none">{{ $book->tieu_de }}</a>
                                         </h6>
-                                        <p class="text-muted small mb-2">{{ $book->author_name ?? 'Đang cập nhật' }}</p>
+                                        <p class="text-muted small mb-2">
+                                            {{ $book->tacGia->pluck('ten_tac_gia')->implode(', ') ?: 'Đang cập nhật' }}
+                                        </p>
                                         <div class="mt-auto d-flex justify-content-between align-items-center">
                                             <h5 class="fw-bold text-danger mb-0">{{ number_format($book->gia_ban, 0, ',', '.') }} đ</h5>
-                                            <form action="{{ route('cart.add') }}" method="POST" class="m-0">
-                                                @csrf
-                                                <input type="hidden" name="id_sach" value="{{ $book->id }}">
-                                                <input type="hidden" name="so_luong" value="1">
-                                                <button type="submit" class="btn btn-sm btn-dark rounded-0">Thêm vào giỏ</button>
-                                            </form>
+                                            
+                                            {{-- ĐÃ SỬA: Lấy số lượng tồn từ quan hệ khoHang --}}
+                                            @if (($book->khoHang->so_luong_ton ?? 0) > 0)
+                                                <form action="{{ route('cart.add') }}" method="POST" class="m-0">
+                                                    @csrf
+                                                    <input type="hidden" name="id_sach" value="{{ $book->id }}">
+                                                    <input type="hidden" name="so_luong" value="1">
+                                                    <button type="submit" class="btn btn-sm btn-dark rounded-0">Thêm vào giỏ</button>
+                                                </form>
+                                            @else
+                                                <button type="button" class="btn btn-sm btn-danger rounded-0" disabled>
+                                                    HẾT HÀNG
+                                                </button>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>

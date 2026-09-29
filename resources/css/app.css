@@ -164,3 +164,37 @@ body {
 .lazy-img.loaded {
     opacity: 1;
 }
+CSS
+/* Styling Top Bar */
+.top-bar {
+    font-size: 0.875rem;
+}
+
+.top-bar-item {
+    transition: color 0.2s ease;
+}
+
+.top-bar-item:hover {
+    color: #dc3545 !important;
+}
+
+/* Smember Notification Modal Tabs Styling */
+#smemberTab .nav-link {
+    border-bottom: 2px solid transparent !important;
+    background: transparent;
+}
+
+#smemberTab .nav-link.active {
+    color: #dc3545 !important;
+    border-bottom: 2px solid #dc3545 !important;
+}
+
+.notification-item:last-child {
+    border-bottom: none !important;
+}
+.review-stars .bi-star-fill {
+    color: #ffc107;
+}
+.review-card {
+    transition: all 0.2s ease-in-out;
+}
