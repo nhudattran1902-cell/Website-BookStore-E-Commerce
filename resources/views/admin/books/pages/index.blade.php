@@ -90,7 +90,7 @@
                             @forelse($book->trangSach->sortBy('so_trang') as $trang)
                                 <div class="col">
                                     <div class="card h-100 border shadow-sm">
-                                        <img src="{{ asset('storage/' . $trang->duong_dan_anh) }}"
+                                        <img src="{{ $trang->duong_dan_anh_url }}"
                                             class="card-img-top object-fit-cover" style="height: 220px;"
                                             alt="Trang {{ $trang->so_trang }}">
                                         <div class="card-body p-2 text-center">

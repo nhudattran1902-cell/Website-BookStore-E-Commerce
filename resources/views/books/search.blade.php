@@ -14,7 +14,7 @@
                     <div class="col">
                         <div class="card h-100 border-0 shadow-sm product-card">
                             <a href="{{ route('books.show', $book->id) }}">
-                                <img src="{{ $book->anh_bia ? asset('storage/' . $book->anh_bia) : asset('images/no-cover.jpg') }}"
+                                <img src="{{ $book->anh_bia_url ?: asset('images/no-cover.jpg') }}"
                                     class="card-img-top rounded-0" alt="{{ $book->tieu_de }}"
                                     style="height: 300px; object-fit: cover;">
                             </a>

@@ -26,7 +26,11 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">Mật khẩu</label>
-                            <input type="password" name="mat_khau" class="form-control" required placeholder="••••••••">
+                            <input type="password" name="mat_khau"
+                                class="form-control @error('mat_khau') is-invalid @enderror" required placeholder="••••••••">
+                            @error('mat_khau')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
 
                         <div class="mb-3 form-check d-flex justify-content-between">
@@ -38,6 +42,10 @@
 
                         <button type="submit" class="btn btn-dark w-100 py-2 fw-bold text-uppercase">Đăng nhập</button>
                     </form>
+
+                    <div class="text-center mt-3">
+                        <a href="{{ route('password.request') }}">Quên mật khẩu?</a>
+                    </div>
 
                     <div class="text-center mt-4">
                         <p class="mb-0">Chưa có tài khoản? <a href="{{ route('register') }}"

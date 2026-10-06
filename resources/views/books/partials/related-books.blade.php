@@ -15,14 +15,15 @@
         <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4">
             @foreach($books as $relBook)
                 <div class="col">
-                    <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden position-relative hover-top">
+                    <div class="card book-card discovery-book-card h-100 border-0 shadow-sm rounded-4 overflow-hidden position-relative hover-top">
                         <!-- Ảnh bìa -->
                         <a href="{{ route('books.show', $relBook->id) }}" class="text-decoration-none">
                             <div class="ratio ratio-3x4 bg-light">
-                                <img src="{{ $relBook->anh_bia ? asset('storage/' . $relBook->anh_bia) : asset('images/no-cover.jpg') }}" 
-                                     class="card-img-top object-fit-cover" 
+                                <img src="{{ $relBook->anh_bia_url ?: asset('images/logo.jpg') }}"
+                                     class="card-img-top object-fit-cover discovery-book-cover"
                                      alt="{{ $relBook->tieu_de }}"
-                                     loading="lazy">
+                                     loading="lazy"
+                                     onerror="this.onerror=null;this.src='{{ asset('images/logo.jpg') }}';">
                             </div>
                         </a>
 

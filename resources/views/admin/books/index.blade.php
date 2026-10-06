@@ -21,6 +21,63 @@
             </div>
         @endif
 
+        <form action="{{ route('admin.books.index') }}" method="GET" class="card border mb-4">
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-6 col-xl-3">
+                        <label for="search" class="form-label small fw-semibold">Tiêu đề sách</label>
+                        <input id="search" type="search" name="search" value="{{ request('search') }}" class="form-control form-control-sm" placeholder="Nhập tên sách...">
+                    </div>
+                    <div class="col-md-6 col-xl-2">
+                        <label for="the_loai" class="form-label small fw-semibold">Thể loại</label>
+                        <select id="the_loai" name="the_loai" class="form-select form-select-sm">
+                            <option value="">Tất cả thể loại</option>
+                            @foreach ($categories as $category)
+                                <option value="{{ $category->id }}" @selected((string) request('the_loai') === (string) $category->id)>{{ $category->ten_the_loai }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-6 col-xl-1">
+                        <label for="gia_tu" class="form-label small fw-semibold">Giá từ</label>
+                        <input id="gia_tu" type="number" name="gia_tu" value="{{ request('gia_tu') }}" min="0" step="1000" class="form-control form-control-sm" placeholder="Tối thiểu">
+                    </div>
+                    <div class="col-6 col-xl-1">
+                        <label for="gia_den" class="form-label small fw-semibold">Giá đến</label>
+                        <input id="gia_den" type="number" name="gia_den" value="{{ request('gia_den') }}" min="0" step="1000" class="form-control form-control-sm" placeholder="Tối đa">
+                    </div>
+                    <div class="col-md-4 col-xl-2">
+                        <label for="ton_kho" class="form-label small fw-semibold">Tồn kho</label>
+                        <select id="ton_kho" name="ton_kho" class="form-select form-select-sm">
+                            <option value="">Tất cả</option>
+                            <option value="available" @selected(request('ton_kho') === 'available')>Còn hàng (&gt; 0)</option>
+                            <option value="low" @selected(request('ton_kho') === 'low')>Sắp hết (&lt; 5)</option>
+                            <option value="out" @selected(request('ton_kho') === 'out')>Hết hàng (= 0)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 col-xl-1">
+                        <label for="trang_thai" class="form-label small fw-semibold">Kinh doanh</label>
+                        <select id="trang_thai" name="trang_thai" class="form-select form-select-sm">
+                            <option value="">Tất cả</option>
+                            <option value="active" @selected(request('trang_thai') === 'active')>Đang bán</option>
+                            <option value="inactive" @selected(request('trang_thai') === 'inactive')>Ngừng bán</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 col-xl-2">
+                        <label for="sort_gia" class="form-label small fw-semibold">Sắp xếp giá</label>
+                        <select id="sort_gia" name="sort_gia" class="form-select form-select-sm">
+                            <option value="">Mới cập nhật</option>
+                            <option value="asc" @selected(request('sort_gia') === 'asc')>Giá tăng dần</option>
+                            <option value="desc" @selected(request('sort_gia') === 'desc')>Giá giảm dần</option>
+                        </select>
+                    </div>
+                    <div class="col-12 d-flex justify-content-end gap-2">
+                        <a href="{{ route('admin.books.index') }}" class="btn btn-outline-secondary btn-sm">Xóa bộ lọc</a>
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel me-1"></i>Lọc dữ liệu</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+
         <div class="card border-0 shadow-sm">
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -30,6 +87,7 @@
                                 <th class="ps-3" style="width: 70px;">ID</th>
                                 <th style="width: 80px;">Hình ảnh</th>
                                 <th>Tiêu đề sách</th>
+                                <th>Tác giả</th>
                                 <th>Thể loại</th>
                                 <th>Giá bán</th>
                                 <th>Tồn kho</th>
@@ -45,7 +103,7 @@
                                 <tr>
                                     <td class="ps-3 fw-bold">#{{ $book->id }}</td>
                                     <td>
-                                        <img src="{{ $book->anh_bia ? asset('storage/' . $book->anh_bia) : asset('images/no-cover.jpg') }}"
+                                        <img src="{{ $book->anh_bia_url ?: asset('images/no-cover.jpg') }}"
                                             alt="{{ $book->tieu_de }}" class="rounded shadow-sm"
                                             style="width: 48px; height: 64px; object-fit: cover;">
                                     </td>
@@ -53,24 +111,23 @@
                                         <div class="fw-bold text-dark">{{ $book->tieu_de }}</div>
                                         <small class="text-muted">ISBN: {{ $book->ma_isbn ?? 'Chưa cập nhật' }}</small>
                                     </td>
+                                    <td>{{ $book->tacGia->pluck('ten_tac_gia')->implode(', ') ?: 'Đang cập nhật' }}</td>
                                     <td>
                                         <span class="badge bg-secondary">
                                             {{ $book->theLoai->ten_the_loai ?? 'N/A' }}
                                         </span>
                                     </td>
-                                    <td class="fw-bold text-lime">
-                                        {{ number_format($book->gia_ban, 0, ',', '.') }} đ
+                                    <td>
+                                        <div class="fw-bold text-lime">{{ number_format($book->gia_khuyen_mai ?? $book->gia_ban, 0, ',', '.') }} đ</div>
+                                        @if ($book->gia_khuyen_mai)
+                                            <small class="text-muted text-decoration-line-through">{{ number_format($book->gia_ban, 0, ',', '.') }} đ</small>
+                                            <span class="badge bg-warning-subtle text-warning-emphasis">Ưu đãi</span>
+                                        @endif
                                     </td>
                                     <td>
-                                        @if ($soLuongTon > 0)
-                                            <span class="badge bg-success fs-6 fw-normal">
-                                                <i class="bi bi-box-seam me-1"></i>{{ $soLuongTon }} cuốn
-                                            </span>
-                                        @else
-                                            <span class="badge bg-danger fs-6 fw-bold">
-                                                <i class="bi bi-exclamation-triangle-fill me-1"></i>Hết hàng (0)
-                                            </span>
-                                        @endif
+                                        <span class="badge {{ $soLuongTon === 0 ? 'bg-danger-subtle text-danger-emphasis' : ($soLuongTon < 5 ? 'bg-warning-subtle text-warning-emphasis' : 'bg-success-subtle text-success-emphasis') }}">
+                                            <i class="bi {{ $soLuongTon === 0 ? 'bi-exclamation-triangle' : 'bi-box-seam' }} me-1"></i>{{ $soLuongTon }} cuốn
+                                        </span>
                                     </td>
                                     <td>
                                         @if ($book->dang_hoat_dong)
@@ -114,8 +171,8 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center py-4 text-muted">
-                                        Chưa có dữ liệu sách nào trong cơ sở dữ liệu.
+                                    <td colspan="9" class="text-center py-4 text-muted">
+                                        Không có đầu sách phù hợp bộ lọc.
                                     </td>
                                 </tr>
                             @endforelse

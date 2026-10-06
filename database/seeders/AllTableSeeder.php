@@ -2,17 +2,17 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\VaiTro;
+use App\Models\KhoHang;
 use App\Models\NguoiDung;
-use App\Models\TheLoai;
-use App\Models\TacGia;
 use App\Models\NhaXuatBan;
 use App\Models\Sach;
-use App\Models\KhoHang;
+use App\Models\TacGia;
+use App\Models\TheLoai;
 use App\Models\TrangSach;
-use Illuminate\Support\Facades\Hash;
+use App\Models\VaiTro;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class AllTableSeeder extends Seeder
 {
@@ -24,16 +24,16 @@ class AllTableSeeder extends Seeder
 
         // 2. Tạo Tài khoản Người dùng (Admin & Customer)
         $admin = NguoiDung::firstOrCreate(
-            ['email' => 'admin@bookbox.com'],
+            ['email' => 'nhudattran1902@gmail.com'],
             [
                 'ho_ten' => 'Administrator',
                 'mat_khau' => Hash::make('12345678'),
-                'so_dien_thoai' => '0901234567'
+                'so_dien_thoai' => '0901234567',
             ]
         );
         DB::table('vai_tro_nguoi_dung')->updateOrInsert([
             'id_nguoi_dung' => $admin->id,
-            'id_vai_tro' => $roleAdmin->id
+            'id_vai_tro' => $roleAdmin->id,
         ]);
 
         $user = NguoiDung::firstOrCreate(
@@ -41,12 +41,12 @@ class AllTableSeeder extends Seeder
             [
                 'ho_ten' => 'Nguyễn Văn A',
                 'mat_khau' => Hash::make('12345678'),
-                'so_dien_thoai' => '0987654321'
+                'so_dien_thoai' => '0987654321',
             ]
         );
         DB::table('vai_tro_nguoi_dung')->updateOrInsert([
             'id_nguoi_dung' => $user->id,
-            'id_vai_tro' => $roleCustomer->id
+            'id_vai_tro' => $roleCustomer->id,
         ]);
 
         // 3. Tạo Thể loại (Categories)
@@ -72,7 +72,7 @@ class AllTableSeeder extends Seeder
                 'mo_ta' => 'Cuốn sách nghệ thuật ứng xử nổi tiếng nhất thế giới.',
                 'gia_ban' => 120000,
                 'nam_xuat_ban' => 2023,
-                'dang_hoat_dong' => 1
+                'dang_hoat_dong' => 1,
             ]
         );
 
@@ -85,7 +85,7 @@ class AllTableSeeder extends Seeder
                 'mo_ta' => 'Tác phẩm văn học hồn nhiên, đầy ký ức tuổi thơ.',
                 'gia_ban' => 85000,
                 'nam_xuat_ban' => 2022,
-                'dang_hoat_dong' => 1
+                'dang_hoat_dong' => 1,
             ]
         );
 

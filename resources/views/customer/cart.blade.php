@@ -34,7 +34,7 @@
                                         @endphp
                                         <tr>
                                             <td class="ps-3 d-flex align-items-center gap-3">
-                                                <img src="{{ $item->sach->anh_bia ? asset('storage/' . $item->sach->anh_bia) : asset('images/no-cover.jpg') }}"
+                                                <img src="{{ $item->sach->anh_bia_url ?: asset('images/no-cover.jpg') }}"
                                                     alt="{{ $item->sach->tieu_de }}"
                                                     style="width: 50px; height: 70px; object-fit: cover;"
                                                     class="rounded shadow-sm">

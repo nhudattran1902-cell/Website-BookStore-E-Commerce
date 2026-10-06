@@ -48,7 +48,7 @@
                                 <div class="card book-card h-100 shadow-sm border-0">
                                     <div class="img-wrapper ratio-book card-img-top rounded-0 bg-light">
                                         <a href="{{ route('books.show', $book->id) }}">
-                                            <img src="{{ $book->anh_bia ? asset('storage/' . $book->anh_bia) : 'https://via.placeholder.com/200x300' }}"
+                                            <img src="{{ $book->anh_bia_url ?: 'https://via.placeholder.com/200x300' }}"
                                                 class="lazy-img w-100 h-100 object-fit-cover" alt="{{ $book->tieu_de }}" />
                                         </a>
                                     </div>
@@ -62,20 +62,34 @@
                                         <p class="text-muted small mb-2">
                                             {{ $book->tacGia->pluck('ten_tac_gia')->implode(', ') ?: 'Đang cập nhật' }}
                                         </p>
+                                        @php
+                                            $soLuongTon = $book->khoHang->so_luong_ton ?? 0;
+                                        @endphp
+                                        <div class="mb-3">
+                                            <span class="stock-status {{ $soLuongTon > 0 ? 'stock-status--available' : 'stock-status--unavailable' }}">
+                                                <span class="stock-status__dot" aria-hidden="true"></span>
+                                                <span>{{ $soLuongTon > 0 ? 'Còn hàng' : 'Hết hàng' }}</span>
+                                                @if ($soLuongTon > 0)
+                                                    <span class="stock-status__quantity">{{ number_format($soLuongTon) }} cuốn</span>
+                                                @endif
+                                            </span>
+                                        </div>
                                         <div class="mt-auto d-flex justify-content-between align-items-center">
                                             <h5 class="fw-bold text-danger mb-0">{{ number_format($book->gia_ban, 0, ',', '.') }} đ</h5>
                                             
-                                            {{-- ĐÃ SỬA: Lấy số lượng tồn từ quan hệ khoHang --}}
-                                            @if (($book->khoHang->so_luong_ton ?? 0) > 0)
-                                                <form action="{{ route('cart.add') }}" method="POST" class="m-0">
+                                            @if ($soLuongTon > 0)
+                                                <form action="{{ route('cart.add') }}" method="POST" class="m-0"
+                                                    data-cart-form>
                                                     @csrf
                                                     <input type="hidden" name="id_sach" value="{{ $book->id }}">
                                                     <input type="hidden" name="so_luong" value="1">
-                                                    <button type="submit" class="btn btn-sm btn-dark rounded-0">Thêm vào giỏ</button>
+                                                    <button type="submit" class="btn btn-sm btn-dark rounded-0" data-cart-submit>
+                                                        Thêm vào giỏ
+                                                    </button>
                                                 </form>
                                             @else
-                                                <button type="button" class="btn btn-sm btn-danger rounded-0" disabled>
-                                                    HẾT HÀNG
+                                                <button type="button" class="btn btn-sm btn-dark rounded-0" disabled>
+                                                    Hết hàng
                                                 </button>
                                             @endif
                                         </div>

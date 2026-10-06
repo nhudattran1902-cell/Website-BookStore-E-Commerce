@@ -58,24 +58,19 @@
                     <h6 class="notification-title">Thông báo</h6>
                 </div>
                 <div class="notification-list p-2">
-                    <a href="{{ route('admin.orders.index') }}" class="notification-item text-decoration-none">
-                        <div class="notification-icon bg-success text-white">
-                            <i class="bi bi-cart-check"></i>
-                        </div>
-                        <div class="notification-content">
-                            <p class="notification-text">Quản lý các đơn đặt hàng mới</p>
-                            <span class="notification-time">Hệ thống</span>
-                        </div>
-                    </a>
-                    <a href="{{ route('admin.inventory.index') }}" class="notification-item text-decoration-none">
-                        <div class="notification-icon bg-warning text-dark">
-                            <i class="bi bi-boxes"></i>
-                        </div>
-                        <div class="notification-content">
-                            <p class="notification-text">Theo dõi số lượng tồn kho sách</p>
-                            <span class="notification-time">Kho hàng</span>
-                        </div>
-                    </a>
+                    @forelse ($paymentNotifications as $paymentNotification)
+                        <a href="{{ route('admin.orders.show', $paymentNotification->data['order_id']) }}" class="notification-item text-decoration-none">
+                            <div class="notification-icon bg-success text-white">
+                                <i class="bi bi-cash-coin"></i>
+                            </div>
+                            <div class="notification-content">
+                                <p class="notification-text">{{ $paymentNotification->data['message'] }}</p>
+                                <span class="notification-time">{{ $paymentNotification->created_at->diffForHumans() }}</span>
+                            </div>
+                        </a>
+                    @empty
+                        <p class="text-muted small text-center mb-0 py-3">Chưa có thông báo thanh toán.</p>
+                    @endforelse
                 </div>
                 <a href="{{ route('admin.orders.index') }}" class="notification-footer">Xem tất cả đơn hàng</a>
             </div>
@@ -86,7 +81,7 @@
         <div class="dropdown ms-2">
             <button class="navbar-profile-btn dropdown-toggle" type="button" data-bs-toggle="dropdown"
                 aria-expanded="false" id="profile-dropdown">
-                <img src="{{ $adminUser && $adminUser->anh_dai_dien ? asset('storage/' . $adminUser->anh_dai_dien) : 'https://ui-avatars.com/api/?name=' . urlencode($adminUser->ho_ten ?? 'Admin') . '&background=1b4332&color=b4f105&size=32' }}"
+                <img src="{{ $adminUser?->anh_dai_dien_url ?: 'https://ui-avatars.com/api/?name=' . urlencode($adminUser->ho_ten ?? 'Admin') . '&background=1b4332&color=b4f105&size=32' }}"
                     alt="Profile" class="navbar-profile-img">
                 <span class="navbar-profile-name d-none d-md-inline">{{ $adminUser->ho_ten ?? 'Quản trị viên' }}</span>
                 <i class="bi bi-chevron-down navbar-profile-caret"></i>
@@ -95,6 +90,7 @@
                 <li class="dropdown-header">Xin chào, {{ $adminUser->ho_ten ?? 'Admin' }}!</li>
                 <li><a class="dropdown-item" href="{{ route('admin.dashboard') }}"><i class="bi bi-grid me-2"></i> Bảng điều khiển</a></li>
                 <li><a class="dropdown-item" href="{{ route('home') }}" target="_blank"><i class="bi bi-house me-2"></i> Xem website</a></li>
+                <li><a class="dropdown-item" href="{{ route('customer.profile') }}"><i class="bi bi-person me-2"></i> Hồ sơ cá nhân</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
                     <form action="{{ route('logout') }}" method="POST" class="m-0">

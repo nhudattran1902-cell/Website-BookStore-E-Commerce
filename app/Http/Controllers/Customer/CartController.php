@@ -3,11 +3,16 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
-use App\Models\GioHang;
 use App\Models\ChiTietGioHang;
+use App\Models\GioHang;
+use App\Models\KhoHang;
 use App\Models\Sach;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CartController extends Controller
 {
@@ -25,6 +30,7 @@ class CartController extends Controller
         // Tính tổng tiền giỏ hàng
         $tongTien = $cartItems->sum(function ($item) {
             $gia = $item->sach->gia_khuyen_mai ?? $item->sach->gia_ban;
+
             return $gia * $item->so_luong;
         });
 
@@ -32,36 +38,63 @@ class CartController extends Controller
     }
 
     // 2. Thêm sách vào giỏ
-    public function addToCart(Request $request)
+    public function addToCart(Request $request): JsonResponse|RedirectResponse
     {
         $request->validate([
-            'id_sach'  => 'required|exists:sach,id',
-            'so_luong' => 'required|integer|min:1'
+            'id_sach' => 'required|exists:sach,id',
+            'so_luong' => 'required|integer|min:1',
         ]);
 
         $userId = Auth::id();
+        $requestedQuantity = (int) $request->input('so_luong');
 
-        // Kiểm tra sách có đang hoạt động không
-        $sach = Sach::where('id', $request->id_sach)
-            ->where('dang_hoat_dong', 1)
-            ->firstOrFail();
+        [$sach, $gioHang] = DB::transaction(function () use ($request, $userId, $requestedQuantity): array {
+            $sach = Sach::where('id', $request->id_sach)
+                ->where('dang_hoat_dong', 1)
+                ->firstOrFail();
+            $khoHang = KhoHang::where('id_sach', $sach->id)->lockForUpdate()->first();
+            $availableQuantity = (int) ($khoHang?->so_luong_kha_dung ?? 0);
 
-        // Lấy hoặc tạo mới giỏ hàng cho user
-        $gioHang = GioHang::firstOrCreate(['id_nguoi_dung' => $userId]);
+            $gioHang = GioHang::where('id_nguoi_dung', $userId)->first();
+            $item = $gioHang
+                ? ChiTietGioHang::where('id_gio_hang', $gioHang->id)
+                    ->where('id_sach', $sach->id)
+                    ->first()
+                : null;
 
-        // Kiểm tra xem sách đã có trong chi tiết giỏ hàng chưa
-        $item = ChiTietGioHang::where('id_gio_hang', $gioHang->id)
-            ->where('id_sach', $request->id_sach)
-            ->first();
+            $quantityInCart = (int) ($item->so_luong ?? 0);
+            $remainingQuantity = max(0, $availableQuantity - $quantityInCart);
 
-        if ($item) {
-            // Nếu đã có thì cộng dồn số lượng
-            $item->increment('so_luong', $request->so_luong);
-        } else {
-            ChiTietGioHang::create([
-                'id_gio_hang' => $gioHang->id,
-                'id_sach'     => $request->id_sach,
-                'so_luong'    => $request->so_luong
+            if ($requestedQuantity > $remainingQuantity) {
+                $message = $availableQuantity === 0
+                    ? 'Sách hiện đã hết hàng.'
+                    : 'Chỉ còn '.$remainingQuantity.' cuốn có thể thêm vào giỏ.';
+
+                throw ValidationException::withMessages(['so_luong' => $message]);
+            }
+
+            $gioHang ??= GioHang::create(['id_nguoi_dung' => $userId]);
+
+            if ($item) {
+                $item->increment('so_luong', $requestedQuantity);
+            } else {
+                ChiTietGioHang::create([
+                    'id_gio_hang' => $gioHang->id,
+                    'id_sach' => $sach->id,
+                    'so_luong' => $requestedQuantity,
+                ]);
+            }
+
+            return [$sach, $gioHang];
+        });
+
+        if ($request->wantsJson() || $request->ajax()) {
+            $cartCount = ChiTietGioHang::where('id_gio_hang', $gioHang->id)->sum('so_luong');
+
+            return response()->json([
+                'book_name' => $sach->tieu_de,
+                'cart_count' => (int) $cartCount,
+                'message' => 'Đã thêm '.$sach->tieu_de.' vào giỏ hàng!',
             ]);
         }
 
@@ -75,24 +108,38 @@ class CartController extends Controller
         $request->merge(['id' => $itemId]);
 
         $request->validate([
-            'id'       => 'required|exists:chi_tiet_gio_hang,id',
-            'so_luong' => 'required|integer|min:1'
+            'id' => 'required|exists:chi_tiet_gio_hang,id',
+            'so_luong' => 'required|integer|min:1',
         ]);
 
-        $item = ChiTietGioHang::findOrFail($itemId);
-
-        // Kiểm tra quyền sở hữu: item phải thuộc giỏ hàng của user hiện tại
+        $requestedQuantity = (int) $request->input('so_luong');
         $userId = Auth::id();
-        if ($item->gioHang->id_nguoi_dung !== $userId) {
-            abort(403, 'Bạn không có quyền chỉnh sửa giỏ hàng này.');
-        }
 
-        $item->update(['so_luong' => $request->so_luong]);
+        DB::transaction(function () use ($itemId, $requestedQuantity, $userId): void {
+            $item = ChiTietGioHang::with('gioHang')->lockForUpdate()->findOrFail($itemId);
+
+            if ($item->gioHang->id_nguoi_dung !== $userId) {
+                abort(403, 'Bạn không có quyền chỉnh sửa giỏ hàng này.');
+            }
+
+            $khoHang = KhoHang::where('id_sach', $item->id_sach)->lockForUpdate()->first();
+            $availableQuantity = (int) ($khoHang?->so_luong_kha_dung ?? 0);
+
+            if ($requestedQuantity > $availableQuantity) {
+                $message = $availableQuantity === 0
+                    ? 'Sách hiện đã hết hàng.'
+                    : 'Chỉ còn '.$availableQuantity.' cuốn có thể mua.';
+
+                throw ValidationException::withMessages(['so_luong' => $message]);
+            }
+
+            $item->update(['so_luong' => $requestedQuantity]);
+        });
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
-                'status'  => 'success',
-                'message' => 'Đã cập nhật số lượng thành công!'
+                'status' => 'success',
+                'message' => 'Đã cập nhật số lượng thành công!',
             ]);
         }
 

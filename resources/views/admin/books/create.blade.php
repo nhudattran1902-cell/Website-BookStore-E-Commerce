@@ -84,6 +84,17 @@
                             </div>
 
                             <div class="mb-3">
+                                <label class="form-label fw-bold">Giá ưu đãi tuần này (VNĐ)</label>
+                                <input type="number" name="gia_khuyen_mai"
+                                    class="form-control @error('gia_khuyen_mai') is-invalid @enderror"
+                                    value="{{ old('gia_khuyen_mai') }}" min="1" step="1000" placeholder="Để trống nếu không giảm giá">
+                                @error('gia_khuyen_mai')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <small class="form-text text-muted">Giá ưu đãi phải thấp hơn giá bán.</small>
+                            </div>
+
+                            <div class="mb-3">
                                 <label class="form-label fw-bold">Mã ISBN</label>
                                 <input type="text" name="ma_isbn" class="form-control" value="{{ old('ma_isbn') }}"
                                     placeholder="978-3-16-148410-0">
@@ -97,7 +108,14 @@
 
                             <div class="mb-3">
                                 <label class="form-label fw-bold">Ảnh bìa sách</label>
-                                <input type="file" name="anh_bia" class="form-control" accept="image/*">
+                                <input type="file" name="anh_bia" id="book-cover-input"
+                                    class="form-control @error('anh_bia') is-invalid @enderror" accept="image/*"
+                                    data-image-preview="book-cover-preview">
+                                @error('anh_bia')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <img id="book-cover-preview" class="img-thumbnail mt-2 d-none"
+                                    style="height: 120px; object-fit: cover;" alt="Xem trước ảnh bìa">
                             </div>
 
                             <div class="form-check form-switch mb-3">
@@ -116,3 +134,26 @@
         </form>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        document.querySelectorAll('[data-image-preview]').forEach((input) => {
+            input.addEventListener('change', () => {
+                const image = document.getElementById(input.dataset.imagePreview);
+                const file = input.files[0];
+
+                if (!image || !file) {
+                    return;
+                }
+
+                if (image.dataset.previewUrl) {
+                    URL.revokeObjectURL(image.dataset.previewUrl);
+                }
+
+                image.dataset.previewUrl = URL.createObjectURL(file);
+                image.src = image.dataset.previewUrl;
+                image.classList.remove('d-none');
+            });
+        });
+    </script>
+@endpush

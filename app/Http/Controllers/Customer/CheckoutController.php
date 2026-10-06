@@ -3,15 +3,16 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
-use App\Models\GioHang;
-use App\Models\DonHang;
 use App\Models\ChiTietDonHang;
-use App\Models\KhoHang;
+use App\Models\DonHang;
+use App\Models\GioHang;
 use App\Models\ThanhToan;
+use App\Services\OrderWorkflowService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class CheckoutController extends Controller
 {
@@ -24,111 +25,140 @@ class CheckoutController extends Controller
             ->where('id_nguoi_dung', $userId)
             ->first();
 
-        if (!$gioHang || $gioHang->chiTietGioHang->isEmpty()) {
+        if (! $gioHang || $gioHang->chiTietGioHang->isEmpty()) {
             return redirect()->route('cart.index')->with('error', 'Giỏ hàng của bạn đang trống!');
         }
 
         $cartItems = $gioHang->chiTietGioHang;
-        $tongTien  = $cartItems->sum(function ($item) {
+        $tongTien = $cartItems->sum(function ($item) {
             $gia = $item->sach->gia_khuyen_mai ?? $item->sach->gia_ban;
+
             return $gia * $item->so_luong;
         });
         $total = $tongTien;
+
         return view('customer.checkout', compact('cartItems', 'tongTien', 'total'));
     }
 
     // 2. Xử lý Đặt hàng (Lưu thông tin vào CSDL)
-    public function process(Request $request)
+    public function process(Request $request, OrderWorkflowService $workflow)
     {
         // Đồng bộ tên field validate khớp với checkout.blade.php
-        $request->validate([
-            'ten_nguoi_nhan'        => 'required|string|max:255',
-            'sdt_nguoi_nhan'        => 'required|string|max:20',
-            'dia_chi_giao_hang'      => 'required|string',
-            'phuong_thuc_thanh_toan' => 'required|in:COD,MoMo,VNPay',
-            'ghi_chu'                => 'nullable|string'
+        $validated = $request->validate([
+            'ten_nguoi_nhan' => 'required|string|max:255',
+            'sdt_nguoi_nhan' => 'required|string|max:20',
+            'dia_chi_giao_hang' => 'required|string',
+            'phuong_thuc_thanh_toan' => 'required|in:COD,MoMo,VNPay,BankTransfer',
+            'ghi_chu' => 'nullable|string',
         ]);
 
-        $userId  = Auth::id();
-        $gioHang = GioHang::with(['chiTietGioHang.sach'])->where('id_nguoi_dung', $userId)->first();
+        $paymentMethod = $validated['phuong_thuc_thanh_toan'];
+        $demoEnabled = app()->environment(['local', 'testing']) && (bool) config('services.payments.demo_enabled');
+        $paymentIsConfigured = match ($paymentMethod) {
+            'VNPay' => filled(config('services.vnpay.base_url'))
+                && filled(config('services.vnpay.tmn_code'))
+                && filled(config('services.vnpay.hash_secret')),
+            'MoMo' => $demoEnabled || (filled(config('services.momo.endpoint'))
+                && filled(config('services.momo.partner_code'))
+                && filled(config('services.momo.access_key'))
+                && filled(config('services.momo.secret_key'))),
+            'BankTransfer' => $demoEnabled || (filled(config('services.vietqr.bank_id'))
+                && filled(config('services.vietqr.account_no'))
+                && filled(config('services.vietqr.account_name'))
+                && filled(config('services.vietqr.signature_key'))),
+            default => true,
+        };
 
-        if (!$gioHang || $gioHang->chiTietGioHang->isEmpty()) {
-            return redirect()->route('cart.index')->with('error', 'Giỏ hàng của bạn đang trống!');
+        if (! $paymentIsConfigured) {
+            $configurationMessage = match ($paymentMethod) {
+                'VNPay' => 'VNPay chưa được cấu hình. Vui lòng thiết lập VNPAY_TMN_CODE và VNPAY_HASH_SECRET trong .env.',
+                'MoMo' => 'MoMo chưa được cấu hình. Vui lòng thiết lập MOMO_PARTNER_CODE, MOMO_ACCESS_KEY và MOMO_SECRET_KEY trong .env.',
+                'BankTransfer' => 'VietQR chưa được cấu hình. Vui lòng thiết lập thông tin ngân hàng và VIETQR_SIGNATURE_KEY trong .env.',
+                default => 'Phương thức thanh toán chưa được cấu hình.',
+            };
+
+            throw ValidationException::withMessages([
+                'phuong_thuc_thanh_toan' => $configurationMessage,
+            ]);
         }
 
-        $cartItems = $gioHang->chiTietGioHang;
+        $userId = Auth::id();
+        $donHang = DB::transaction(function () use ($validated, $paymentMethod, $userId, $workflow): DonHang {
+            /** @var GioHang|null $gioHang */
+            $gioHang = GioHang::with(['chiTietGioHang.sach'])
+                ->where('id_nguoi_dung', $userId)
+                ->lockForUpdate()
+                ->first();
 
-        // === Kiểm tra tồn kho trước khi thanh toán ===
-        foreach ($cartItems as $item) {
-            if (!$item->sach || !$item->sach->dang_hoat_dong) {
-                return redirect()->route('cart.index')
-                    ->with('error', "Sách \"" . ($item->sach->tieu_de ?? 'không xác định') . "\" hiện không còn bán.");
+            if (! $gioHang || $gioHang->chiTietGioHang->isEmpty()) {
+                throw ValidationException::withMessages(['cart' => 'Giỏ hàng của bạn đang trống!']);
             }
 
-            $kho = KhoHang::where('id_sach', $item->id_sach)->first();
-            if (!$kho || $kho->so_luong_ton < $item->so_luong) {
-                $conLai = $kho ? $kho->so_luong_ton : 0;
-                return redirect()->route('cart.index')
-                    ->with('error', "Sách \"{$item->sach->tieu_de}\" chỉ còn {$conLai} cuốn trong kho.");
+            foreach ($gioHang->chiTietGioHang as $item) {
+                if (! $item->sach || ! $item->sach->dang_hoat_dong) {
+                    throw ValidationException::withMessages([
+                        'cart' => 'Một hoặc nhiều sách trong giỏ hiện không còn được bán.',
+                    ]);
+                }
             }
-        }
 
-        $tongTien = $cartItems->sum(function ($item) {
-            $gia = $item->sach->gia_khuyen_mai ?? $item->sach->gia_ban;
-            return $gia * $item->so_luong;
-        });
+            $tongTien = $gioHang->chiTietGioHang->sum(function ($item): float {
+                $gia = $item->sach->gia_khuyen_mai ?? $item->sach->gia_ban;
 
-        DB::beginTransaction();
-        try {
-            // A. Tạo Đơn hàng mới
+                return $gia * $item->so_luong;
+            });
+            $isOnlinePayment = $paymentMethod !== 'COD';
+
             $donHang = DonHang::create([
-                'ma_don_hang'       => 'ORD-' . strtoupper(Str::random(8)),
-                'id_nguoi_dung'     => $userId,
-                'tong_tien'         => $tongTien,
-                'so_tien_giam_gia'  => 0,
-                'thanh_tien'        => $tongTien,
-                'trang_thai'        => 'cho_xu_ly',
-                'dia_chi_giao_hang' => $request->dia_chi_giao_hang
-                    . ' (SĐT: ' . $request->sdt_nguoi_nhan
-                    . ' - Người nhận: ' . $request->ten_nguoi_nhan . ')',
-                'ghi_chu'           => $request->ghi_chu
+                'ma_don_hang' => 'ORD-'.strtoupper(Str::random(8)),
+                'id_nguoi_dung' => $userId,
+                'ten_nguoi_nhan' => $validated['ten_nguoi_nhan'],
+                'sdt_nguoi_nhan' => $validated['sdt_nguoi_nhan'],
+                'dia_chi_nhan' => $validated['dia_chi_giao_hang'],
+                'dia_chi_giao_hang' => $validated['dia_chi_giao_hang'],
+                'tong_tien' => $tongTien,
+                'so_tien_giam_gia' => 0,
+                'thanh_tien' => $tongTien,
+                'trang_thai' => 'cho_xu_ly',
+                'da_giu_ton' => false,
+                'thanh_toan_het_han_at' => $isOnlinePayment
+                    ? now()->addMinutes((int) config('services.payments.expiry_minutes', 15))
+                    : null,
+                'ghi_chu' => $validated['ghi_chu'] ?? null,
             ]);
 
-            // B. Lưu Chi tiết đơn hàng & Trừ kho (lockForUpdate)
-            foreach ($cartItems as $item) {
+            foreach ($gioHang->chiTietGioHang as $item) {
                 $donGia = $item->sach->gia_khuyen_mai ?? $item->sach->gia_ban;
 
                 ChiTietDonHang::create([
                     'id_don_hang' => $donHang->id,
-                    'id_sach'     => $item->id_sach,
-                    'don_gia'     => $donGia,
-                    'so_luong'    => $item->so_luong,
-                    'thanh_tien'  => $donGia * $item->so_luong
+                    'id_sach' => $item->id_sach,
+                    'don_gia' => $donGia,
+                    'so_luong' => $item->so_luong,
+                    'thanh_tien' => $donGia * $item->so_luong,
                 ]);
-
-                // Trừ kho với lock để tránh race condition
-                $kho = KhoHang::where('id_sach', $item->id_sach)->lockForUpdate()->first();
-                $kho->decrement('so_luong_ton', $item->so_luong);
             }
 
-            // C. Tạo bản ghi Thanh toán
+            $workflow->reserveInventory($donHang);
+
             ThanhToan::create([
-                'id_don_hang'            => $donHang->id,
-                'phuong_thuc_thanh_toan' => $request->phuong_thuc_thanh_toan,
-                'so_tien'                => $tongTien,
-                'trang_thai'             => 'cho_thanh_toan'
+                'id_don_hang' => $donHang->id,
+                'phuong_thuc_thanh_toan' => $paymentMethod,
+                'so_tien' => $tongTien,
+                'trang_thai' => 'cho_thanh_toan',
             ]);
 
-            // D. Xóa giỏ hàng sau khi đặt thành công
+            $workflow->recordInitial($donHang, $userId);
             $gioHang->chiTietGioHang()->delete();
 
-            DB::commit();
+            return $donHang;
+        }, attempts: 3);
 
-            return redirect()->route('checkout.success', $donHang->ma_don_hang);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->back()->with('error', 'Lỗi xử lý đơn hàng: ' . $e->getMessage());
+        if ($paymentMethod !== 'COD') {
+            return redirect()->route('checkout.payment.start', $donHang->ma_don_hang);
         }
+
+        return redirect()->route('checkout.success', $donHang->ma_don_hang);
     }
 
     // 3. Trang đặt hàng thành công

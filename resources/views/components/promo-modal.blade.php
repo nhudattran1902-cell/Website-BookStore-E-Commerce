@@ -1,5 +1,3 @@
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
-    integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
 @if (request()->routeIs('home'))
     <div class="modal fade" id="promoPopupModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -15,9 +13,8 @@
                     <!-- Thẻ link click chuyển tới cửa hàng -->
                     <a href="{{ route('books.index') }}"
                         class="d-block text-decoration-none rounded-4 overflow-hidden shadow-lg">
-                        <img src="{{ asset('images/popup.jpg') }}" alt="Chương Trình Khuyến Mãi BOOK & BOX"
-                            class="img-fluid w-100 rounded-4"
-                            onerror="this.onerror=null; this.src='{{ asset('popup.jpg') }}';">
+                        <img src="{{ asset('images/popup.png') }}" alt="Chương Trình Khuyến Mãi BOOK & BOX"
+                            class="img-fluid w-100 rounded-4">
                     </a>
                 </div>
             </div>

@@ -35,3 +35,83 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 });
+
+document.addEventListener("submit", async (event) => {
+    const form = event.target.closest("[data-cart-form]");
+
+    if (!form) {
+        return;
+    }
+
+    event.preventDefault();
+
+    const button = form.querySelector("[data-cart-submit]");
+    if (!button || form.dataset.submitting === "true") {
+        return;
+    }
+
+    const originalMarkup = button.innerHTML;
+    const wasDisabled = button.disabled;
+
+    form.dataset.submitting = "true";
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Đang thêm...';
+
+    try {
+        const response = await fetch(form.action, {
+            method: "POST",
+            body: new FormData(form),
+            headers: {
+                Accept: "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+        });
+        const contentType = response.headers.get("content-type") || "";
+        const payload = contentType.includes("application/json") ? await response.json() : {};
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                throw new Error("Vui lòng đăng nhập để thêm sách vào giỏ hàng.");
+            }
+
+            const validationMessage = Object.values(payload.errors || {}).flat()[0];
+            throw new Error(validationMessage || payload.message || "Không thể thêm sách vào giỏ hàng.");
+        }
+
+        const cartCount = document.querySelector("[data-cart-count]");
+        if (cartCount && Number.isFinite(Number(payload.cart_count))) {
+            const count = Number(payload.cart_count);
+            cartCount.textContent = count;
+            cartCount.setAttribute("aria-label", `${count} sản phẩm trong giỏ`);
+            cartCount.classList.toggle("d-none", count === 0);
+        }
+
+        showCartToast(payload.message || `Đã thêm ${payload.book_name} vào giỏ hàng!`);
+    } catch (error) {
+        showCartToast(error.message || "Đã xảy ra lỗi. Vui lòng thử lại.", true);
+    } finally {
+        button.innerHTML = originalMarkup;
+        button.disabled = wasDisabled;
+        delete form.dataset.submitting;
+    }
+});
+
+function showCartToast(message, isError = false) {
+    const region = document.getElementById("cart-toast-region");
+    if (!region) {
+        return;
+    }
+
+    const toast = document.createElement("div");
+    toast.className = `cart-toast${isError ? " cart-toast--error" : ""}`;
+    toast.setAttribute("role", isError ? "alert" : "status");
+    toast.textContent = message;
+    region.append(toast);
+
+    requestAnimationFrame(() => toast.classList.add("is-visible"));
+
+    window.setTimeout(() => {
+        toast.classList.remove("is-visible");
+        window.setTimeout(() => toast.remove(), 250);
+    }, 3000);
+}

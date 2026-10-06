@@ -19,6 +19,53 @@
     <!-- START: Main Layout Grid -->
     <div class="row g-4">
 
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <h2 class="card-title mb-0">Hỗ trợ CSKH</h2>
+                        @if ($tinHoTroChuaDoc > 0)
+                            <span class="badge bg-danger">{{ $tinHoTroChuaDoc }} tin chưa đọc</span>
+                        @endif
+                    </div>
+                    <a href="{{ route('admin.chat.index') }}" class="btn btn-sm btn-outline-primary">
+                        Mở hộp thư <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="transaction-list">
+                    @forelse ($tinNhanHoTroMoi as $message)
+                        @php
+                            $conversationId = $message->id_nguoi_dung ?? $message->session_id;
+                            $customerName = $message->nguoiDung?->ho_ten
+                                ?? $message->ten_khach
+                                ?? 'Khách vãng lai';
+                            $isUnread = $message->nguoi_gui === 'khach_hang' && ! $message->da_doc;
+                        @endphp
+                        <a href="{{ route('admin.chat.index', ['conv_id' => $conversationId]) }}"
+                            class="transaction-item text-decoration-none text-reset">
+                            <div class="transaction-icon {{ $isUnread ? 'bg-danger-subtle text-danger' : 'bg-forest-light text-lime' }}">
+                                <i class="bi bi-chat-dots"></i>
+                            </div>
+                            <div class="transaction-info">
+                                <div class="transaction-name d-flex align-items-center gap-2">
+                                    <strong>{{ $customerName }}</strong>
+                                    @if ($isUnread)
+                                        <span class="badge bg-danger-subtle text-danger-emphasis">Mới</span>
+                                    @elseif ($message->nguoi_gui === 'admin')
+                                        <span class="badge bg-success-subtle text-success-emphasis">Admin trả lời</span>
+                                    @endif
+                                </div>
+                                <div class="transaction-date text-truncate">{{ \Illuminate\Support\Str::limit($message->noi_dung, 140) }}</div>
+                            </div>
+                            <small class="text-muted ms-2">{{ $message->ngay_tao }}</small>
+                        </a>
+                    @empty
+                        <div class="p-4 text-center text-muted">Chưa có tin nhắn hỗ trợ từ khách hàng.</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+
         <!-- TOP AREA: Quick Info Stat Cards Row -->
         <div class="col-12">
             <div class="row g-4">

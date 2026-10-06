@@ -7,12 +7,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class Sach extends Model
 {
     protected $table = 'sach';
 
     const CREATED_AT = 'ngay_tao';
+
     const UPDATED_AT = 'ngay_cap_nhat';
 
     protected $fillable = [
@@ -21,6 +24,7 @@ class Sach extends Model
         'id_the_loai',
         'id_nha_xuat_ban',
         'gia_ban',
+        'gia_von',
         'gia_khuyen_mai',
         'ma_isbn',
         'anh_bia',
@@ -30,6 +34,21 @@ class Sach extends Model
         'ban_chay',
         'dang_hoat_dong',
     ];
+
+    public function getAnhBiaUrlAttribute(): ?string
+    {
+        $coverPath = $this->anh_bia;
+
+        if (! is_string($coverPath) || $coverPath === '') {
+            return null;
+        }
+
+        if (Str::startsWith($coverPath, ['http://', 'https://'])) {
+            return $coverPath;
+        }
+
+        return Storage::disk('public')->url(ltrim($coverPath, '/'));
+    }
 
     // Quan hệ Nhiều - Nhiều: Một cuốn sách có thể do nhiều Tác giả sáng tác
     public function tacGia(): BelongsToMany

@@ -1,6 +1,6 @@
 <!-- Bootstrap Icons CDN -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-<section class="py-5 bg-light">
+<section class="py-5 bg-light literary-authors">
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
@@ -15,9 +15,9 @@
         <div class="row row-cols-2 row-cols-sm-3 row-cols-md-5 g-4">
             @forelse($authors as $author)
                 <div class="col text-center">
-                    <div class="card h-100 border-0 shadow-sm rounded-4 p-3 hover-top transition">
+                    <div class="card literary-author-card h-100 border-0 shadow-sm rounded-4 p-3 hover-top transition">
                         <div class="position-relative mx-auto mb-3" style="width: 100px; height: 100px;">
-                            <img src="{{ $author->anh_dai_dien ? asset('storage/' . $author->anh_dai_dien) : 'https://ui-avatars.com/api/?name=' . urlencode($author->ten_tac_gia) . '&background=f8d7da&color=dc3545&size=100' }}"
+                            <img src="{{ $author->anh_dai_dien ? asset('storage/' . $author->anh_dai_dien) : 'https://ui-avatars.com/api/?name=' . urlencode($author->ten_tac_gia) . '&background=eee8df&color=263b50&size=100' }}"
                                 class="rounded-circle w-100 h-100 object-fit-cover border border-2 border-danger-subtle p-1"
                                 alt="{{ $author->ten_tac_gia }}">
                         </div>

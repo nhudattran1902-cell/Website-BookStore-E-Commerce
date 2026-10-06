@@ -15,7 +15,11 @@ class AdminReviewController extends Controller
         $query = DanhGiaSach::with(['nguoiDung', 'sach'])->latest('ngay_tao');
 
         if ($request->filled('status')) {
-            $query->where('da_duyet', $request->status === 'approved');
+            if ($request->status === 'approved') {
+                $query->where('da_duyet', true);
+            } elseif ($request->status === 'pending') {
+                $query->where('da_duyet', false);
+            }
         }
 
         $reviews = $query->paginate(10)->withQueryString();
@@ -26,7 +30,7 @@ class AdminReviewController extends Controller
     public function toggleApprove(int $id): RedirectResponse
     {
         $review = DanhGiaSach::findOrFail($id);
-        $review->update(['da_duyet' => !$review->da_duyet]);
+        $review->update(['da_duyet' => ! $review->da_duyet]);
 
         return redirect()->back()->with('success', 'Cập nhật trạng thái đánh giá thành công!');
     }

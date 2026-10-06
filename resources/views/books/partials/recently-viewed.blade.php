@@ -10,13 +10,14 @@
         <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4">
             @foreach($recentlyViewedBooks as $viewedBook)
                 <div class="col">
-                    <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden hover-top">
+                    <div class="card book-card discovery-book-card h-100 border-0 shadow-sm rounded-4 overflow-hidden hover-top">
                         <a href="{{ route('books.show', $viewedBook->id) }}" class="text-decoration-none">
                             <div class="ratio ratio-3x4 bg-light">
-                                <img src="{{ $viewedBook->anh_bia ? asset('storage/' . $viewedBook->anh_bia) : asset('images/no-cover.jpg') }}" 
-                                     class="card-img-top object-fit-cover" 
+                                <img src="{{ $viewedBook->anh_bia_url ?: asset('images/logo.jpg') }}"
+                                     class="card-img-top object-fit-cover discovery-book-cover"
                                      alt="{{ $viewedBook->tieu_de }}"
-                                     loading="lazy">
+                                     loading="lazy"
+                                     onerror="this.onerror=null;this.src='{{ asset('images/logo.jpg') }}';">
                             </div>
                         </a>
 

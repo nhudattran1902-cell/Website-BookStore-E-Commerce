@@ -35,14 +35,16 @@ class BookPageController extends Controller
 
         $request->validate([
             'so_trang' => 'required|integer|min:1',
-            'anh_trang' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'anh_trang' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096|dimensions:max_width=2000,max_height=3000',
             'danh_sach_anh' => 'nullable|array',
-            'danh_sach_anh.*' => 'image|mimes:jpeg,png,jpg,webp|max:4096',
+            'danh_sach_anh.*' => 'image|mimes:jpeg,png,jpg,webp|max:4096|dimensions:max_width=2000,max_height=3000',
         ], [
             'so_trang.required' => 'Vui lòng nhập số thứ tự trang.',
             'so_trang.integer' => 'Số trang phải là số nguyên dương.',
             'anh_trang.image' => 'File tải lên phải là hình ảnh hợp lệ.',
             'danh_sach_anh.*.image' => 'Tất cả các file tải lên phải là hình ảnh.',
+            'anh_trang.dimensions' => 'Kích thước ảnh tối đa là 2000 x 3000 pixel.',
+            'danh_sach_anh.*.dimensions' => 'Mỗi ảnh tối đa là 2000 x 3000 pixel.',
         ]);
 
         $choPhepDocThu = $request->has('cho_phep_doc_thu') ? 1 : 0;
@@ -54,7 +56,7 @@ class BookPageController extends Controller
             $currentPage = $startPage;
 
             foreach ($files as $file) {
-                $path = $file->store('book_pages/' . $bookId, 'public');
+                $path = $file->store('book_pages/'.$bookId, 'public');
 
                 TrangSach::create([
                     'id_sach' => $bookId,
@@ -67,13 +69,13 @@ class BookPageController extends Controller
             }
 
             return redirect()->route('admin.books.pages.index', $bookId)
-                ->with('success', 'Đã thêm thành công ' . count($files) . ' trang sách đọc thử!');
+                ->with('success', 'Đã thêm thành công '.count($files).' trang sách đọc thử!');
         }
 
         // Trường hợp 2: Tải 1 trang đơn lẻ
         if ($request->hasFile('anh_trang')) {
             $file = $request->file('anh_trang');
-            $path = $file->store('book_pages/' . $bookId, 'public');
+            $path = $file->store('book_pages/'.$bookId, 'public');
 
             TrangSach::create([
                 'id_sach' => $bookId,
@@ -83,7 +85,7 @@ class BookPageController extends Controller
             ]);
 
             return redirect()->route('admin.books.pages.index', $bookId)
-                ->with('success', 'Đã thêm trang số ' . $startPage . ' thành công!');
+                ->with('success', 'Đã thêm trang số '.$startPage.' thành công!');
         }
 
         return redirect()->back()->with('error', 'Vui lòng chọn hình ảnh trang sách.');
@@ -99,7 +101,9 @@ class BookPageController extends Controller
 
         $request->validate([
             'so_trang' => 'required|integer|min:1',
-            'anh_trang' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'anh_trang' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096|dimensions:max_width=2000,max_height=3000',
+        ], [
+            'anh_trang.dimensions' => 'Kích thước ảnh tối đa là 2000 x 3000 pixel.',
         ]);
 
         $data = [
@@ -113,14 +117,14 @@ class BookPageController extends Controller
                 Storage::disk('public')->delete($page->duong_dan_anh);
             }
 
-            $path = $request->file('anh_trang')->store('book_pages/' . $bookId, 'public');
+            $path = $request->file('anh_trang')->store('book_pages/'.$bookId, 'public');
             $data['duong_dan_anh'] = $path;
         }
 
         $page->update($data);
 
         return redirect()->route('admin.books.pages.index', $bookId)
-            ->with('success', 'Đã cập nhật trang số ' . $page->so_trang . ' thành công!');
+            ->with('success', 'Đã cập nhật trang số '.$page->so_trang.' thành công!');
     }
 
     /**
@@ -139,7 +143,6 @@ class BookPageController extends Controller
         $page->delete();
 
         return redirect()->route('admin.books.pages.index', $bookId)
-            ->with('success', 'Đã xóa trang số ' . $pageNumber . ' thành công!');
+            ->with('success', 'Đã xóa trang số '.$pageNumber.' thành công!');
     }
 }
-

@@ -1,5 +1,5 @@
 <!-- 5. Bestselling Books -->
-<section class="container py-5 border-top">
+<section class="container py-5 border-top home-book-section">
     <div class="d-flex justify-content-between align-items-end mb-4">
         <h3 class="fw-bold mb-0">Sách bán chạy nhất</h3>
         <a href="{{ route('books.index', ['sort' => 'price_desc']) }}" class="text-dark text-decoration-none fw-medium small">Xem tất cả <i
@@ -10,17 +10,17 @@
         <!-- Vòng lặp qua danh sách sách bán chạy -->
         @foreach ($bestsellingBooks as $book)
             <div class="col">
-                <div class="card book-card h-100">
+                <div class="card book-card home-book-card h-100">
                     <div class="img-wrapper ratio-book card-img-top rounded-0">
                         <a href="{{ route('books.show', $book->id) }}" class="d-block w-100 h-100">
                             <div class="loading-spinner"></div>
-                            <img src="{{ $book->anh_bia ? asset('storage/' . $book->anh_bia) : 'https://via.placeholder.com/200x300/bdc3c7/ffffff?text=Cover' }}"
+                            <img src="{{ $book->anh_bia_url ?: 'https://via.placeholder.com/200x300/bdc3c7/ffffff?text=Cover' }}"
                                 class="lazy-img" alt="{{ $book->tieu_de }}" />
                         </a>
                     </div>
-                    <div class="card-body px-0">
+                    <div class="card-body d-flex flex-column px-0">
                         <small class="text-theme text-uppercase fw-bold d-block mb-1"
-                            style="font-size: 0.7rem">Paperback</small>
+                            style="font-size: 0.7rem">{{ number_format($book->purchased_quantity) }} lượt mua</small>
 
                         <!-- Tên sách từ cột tieu_de -->
                         <h6 class="card-title fw-bold text-truncate">
@@ -28,22 +28,27 @@
                         </h6>
 
                         <!-- Tác giả từ bảng liên kết tac_gia -->
-                        <p class="text-muted small mb-2">{{ $book->author_name ?? 'Đang cập nhật' }}</p>
+                        <p class="text-muted small mb-2">{{ $book->tacGia->pluck('ten_tac_gia')->implode(', ') ?: 'Đang cập nhật' }}</p>
 
                         <!-- Giá bán từ cột gia_ban -->
-                        <h5 class="fw-bold mb-0">${{ number_format($book->gia_ban, 2) }}</h5>
+                        <h5 class="book-price fw-bold mb-0">{{ number_format($book->gia_khuyen_mai ?? $book->gia_ban, 0, ',', '.') }} đ</h5>
+                        @if ($book->gia_khuyen_mai)
+                            <small class="text-muted text-decoration-line-through">{{ number_format($book->gia_ban, 0, ',', '.') }} đ</small>
+                        @endif
 
-                        @if ((int) $book->so_luong_ton > 0)
-                            <form action="{{ route('cart.add') }}" method="POST" class="mt-2">
+                        @if ((int) ($book->khoHang?->so_luong_ton ?? 0) > 0)
+                            <form action="{{ route('cart.add') }}" method="POST" class="mt-auto pt-2">
                                 @csrf
                                 <input type="hidden" name="id_sach" value="{{ $book->id }}">
                                 <input type="hidden" name="so_luong" value="1">
                                 <button type="submit" class="btn btn-sm btn-dark w-100 rounded-0">Thêm vào giỏ</button>
                             </form>
                         @else
-                            <button type="button" class="btn btn-sm btn-danger w-100 rounded-0 mt-2" disabled>
-                                HẾT HÀNG
-                            </button>
+                            <div class="mt-auto pt-2">
+                                <button type="button" class="btn btn-sm btn-danger w-100 rounded-0" disabled>
+                                    HẾT HÀNG
+                                </button>
+                            </div>
                         @endif
                     </div>
                 </div>

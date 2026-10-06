@@ -8,7 +8,7 @@
             <!-- Ảnh bìa sách -->
             <div class="col-md-4 mb-4">
                 <div class="card border-0 shadow-sm">
-                    <img src="{{ $book->anh_bia ? asset('storage/' . $book->anh_bia) : 'https://via.placeholder.com/300x450' }}"
+                    <img src="{{ $book->anh_bia_url ?: 'https://via.placeholder.com/300x450' }}"
                         class="img-fluid rounded-0 w-100" alt="{{ $book->tieu_de }}">
                 </div>
             </div>
@@ -39,25 +39,29 @@
                         $soLuongTon = $book->khoHang->so_luong_ton ?? 0;
                     @endphp
 
+                    <span class="stock-status {{ $soLuongTon > 0 ? 'stock-status--available' : 'stock-status--unavailable' }}">
+                        <span class="stock-status__dot" aria-hidden="true"></span>
+                        <span>{{ $soLuongTon > 0 ? 'Còn hàng' : 'Hết hàng' }}</span>
+                        @if ($soLuongTon > 0)
+                            <span class="stock-status__quantity">{{ number_format($soLuongTon) }} cuốn khả dụng</span>
+                        @endif
+                    </span>
+
                     @if ($soLuongTon > 0)
-                        {{-- Form thêm vào giỏ hàng bình thường --}}
-                        <form action="{{ route('cart.add') }}" method="POST" class="d-flex gap-2">
+                        <form action="{{ route('cart.add') }}" method="POST" class="d-flex gap-2"
+                            data-cart-form>
                             @csrf
                             <input type="hidden" name="id_sach" value="{{ $book->id }}">
                             <input type="number" name="so_luong" value="1" min="1" max="{{ $soLuongTon }}"
-                                class="form-control rounded-0" style="width: 80px;">
-                            <button type="submit" class="btn btn-dark px-4 py-2 rounded-0">
+                                class="form-control rounded-0" style="width: 80px;" aria-label="Số lượng">
+                            <button type="submit" class="btn btn-dark px-4 py-2 rounded-0" data-cart-submit>
                                 <i class="bi bi-cart-plus me-1"></i> Thêm vào giỏ hàng
                             </button>
                         </form>
                     @else
-                        {{-- Khóa nút mua và hiển thị badge HẾT HÀNG --}}
-                        <div class="d-flex align-items-center gap-2">
-                            <button class="btn btn-danger px-4 py-2 rounded-0 disabled" disabled>
-                                <i class="bi bi-x-circle me-1"></i> HẾT HÀNG
-                            </button>
-                            <span class="badge bg-danger fs-6 py-2 px-3">Tạm hết hàng trong kho</span>
-                        </div>
+                        <button type="button" class="btn btn-dark px-4 py-2 rounded-0" disabled>
+                            <i class="bi bi-cart-plus me-1"></i> Hết hàng
+                        </button>
                     @endif
 
                     <!-- Nút Đọc ngay (Luôn hiển thị) -->
@@ -158,9 +162,9 @@
             </div>
 
             <!-- Danh sách đánh giá -->
-            <div class="review-list">
+            <div class="review-list" id="review-interactions" data-csrf-token="{{ csrf_token() }}">
                 @forelse($reviews as $review)
-                    <div class="border-bottom pb-3 mb-3">
+                    <article class="review-card border-bottom pb-4 mb-4" data-review-card data-review-id="{{ $review->id }}">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <span class="fw-bold text-dark">{{ $review->nguoiDung->ho_ten ?? 'Khách hàng' }}</span>
                             <small class="text-muted">{{ $review->ngay_tao }}</small>
@@ -171,7 +175,65 @@
                             @endfor
                         </div>
                         <p class="mb-0 text-secondary small">{{ $review->binh_luan }}</p>
-                    </div>
+
+                        <div class="d-flex flex-wrap gap-2 mt-3">
+                            @auth
+                                @php
+                                    $hasLikedReview = $review->luotThich->isNotEmpty();
+                                @endphp
+                                <button type="button"
+                                    class="btn btn-sm {{ $hasLikedReview ? 'btn-outline-danger' : 'btn-outline-dark' }} review-like-button"
+                                    data-review-like
+                                    data-url="{{ route('books.reviews.likes.toggle', $review->id) }}"
+                                    aria-pressed="{{ $hasLikedReview ? 'true' : 'false' }}">
+                                    <i class="bi bi-hand-thumbs-up me-1" aria-hidden="true"></i>
+                                    Đồng thuận (<span data-review-like-count>{{ $review->luot_thich_count }}</span>)
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-dark"
+                                    data-review-reply-toggle aria-expanded="false">
+                                    <i class="bi bi-chat-dots me-1" aria-hidden="true"></i>
+                                    Phản hồi (<span data-review-reply-count>{{ $review->binh_luans_count }}</span>)
+                                </button>
+                            @else
+                                <a href="{{ route('login') }}" class="btn btn-sm btn-outline-dark">
+                                    <i class="bi bi-hand-thumbs-up me-1" aria-hidden="true"></i>
+                                    Đồng thuận ({{ $review->luot_thich_count }})
+                                </a>
+                                <a href="{{ route('login') }}" class="btn btn-sm btn-outline-dark">
+                                    <i class="bi bi-chat-dots me-1" aria-hidden="true"></i>
+                                    Phản hồi ({{ $review->binh_luans_count }})
+                                </a>
+                            @endauth
+                        </div>
+
+                        <div class="review-replies mt-3" data-review-replies>
+                            @foreach ($review->binhLuans as $reply)
+                                <div class="review-reply border-start ps-3 py-2 mb-2">
+                                    <div class="d-flex flex-wrap align-items-baseline gap-2 mb-1">
+                                        <strong class="small">{{ $reply->nguoiDung->ho_ten ?? 'Khách hàng' }}</strong>
+                                        <small class="text-muted">{{ $reply->ngay_tao }}</small>
+                                    </div>
+                                    <p class="small text-secondary mb-0" style="white-space: pre-line">{{ $reply->noi_dung }}</p>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        @auth
+                            <form class="review-reply-form d-none mt-3" data-review-reply-form
+                                action="{{ route('books.reviews.replies.store', $review->id) }}" method="POST">
+                                @csrf
+                                <label class="form-label small fw-semibold" for="review-reply-{{ $review->id }}">Viết phản hồi</label>
+                                <textarea id="review-reply-{{ $review->id }}" name="noi_dung" class="form-control form-control-sm"
+                                    rows="2" maxlength="1000" required placeholder="Chia sẻ phản hồi của bạn..."></textarea>
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <small class="text-danger" data-review-reply-error role="alert"></small>
+                                    <button type="submit" class="btn btn-sm btn-dark">
+                                        <i class="bi bi-send me-1" aria-hidden="true"></i>Gửi phản hồi
+                                    </button>
+                                </div>
+                            </form>
+                        @endauth
+                    </article>
                 @empty
                     <p class="text-center text-muted py-3">Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá cuốn sách
                         này!</p>
@@ -210,7 +272,7 @@
                             <div class="carousel-inner">
                                 @foreach ($previewPages as $index => $trang)
                                     <div class="carousel-item {{ $index == 0 ? 'active' : '' }}">
-                                        <img src="{{ asset('storage/' . $trang->duong_dan_anh) }}"
+                                        <img src="{{ $trang->duong_dan_anh_url }}"
                                             class="d-block mx-auto img-fluid shadow-sm" style="max-height: 600px;"
                                             alt="Trang {{ $trang->so_trang }}">
                                         <div class="mt-2 text-muted fw-bold">Trang {{ $trang->so_trang }}</div>
@@ -234,3 +296,125 @@
         </div>
     @endif
 @endsection
+
+@pushOnce('scripts', 'review-interactions')
+    <script>
+        const reviewInteractionRoot = document.getElementById('review-interactions');
+        const reviewCsrfToken = reviewInteractionRoot?.dataset.csrfToken;
+
+        document.addEventListener('click', async (event) => {
+            const replyToggle = event.target.closest('[data-review-reply-toggle]');
+            if (replyToggle) {
+                const card = replyToggle.closest('[data-review-card]');
+                const form = card.querySelector('[data-review-reply-form]');
+                const isExpanded = replyToggle.getAttribute('aria-expanded') === 'true';
+
+                replyToggle.setAttribute('aria-expanded', String(!isExpanded));
+                form.classList.toggle('d-none', isExpanded);
+                if (!isExpanded) {
+                    form.querySelector('textarea').focus();
+                }
+
+                return;
+            }
+
+            const likeButton = event.target.closest('[data-review-like]');
+            if (!likeButton || likeButton.disabled) {
+                return;
+            }
+
+            likeButton.disabled = true;
+
+            try {
+                const response = await fetch(likeButton.dataset.url, {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': reviewCsrfToken,
+                    },
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Không thể cập nhật lượt đồng thuận.');
+                }
+
+                likeButton.querySelector('[data-review-like-count]').textContent = data.count;
+                likeButton.setAttribute('aria-pressed', String(data.liked));
+                likeButton.classList.toggle('btn-outline-danger', data.liked);
+                likeButton.classList.toggle('btn-outline-dark', !data.liked);
+                likeButton.removeAttribute('title');
+            } catch (error) {
+                likeButton.title = error.message;
+            } finally {
+                likeButton.disabled = false;
+            }
+        });
+
+        document.addEventListener('submit', async (event) => {
+            const form = event.target.closest('[data-review-reply-form]');
+            if (!form) {
+                return;
+            }
+
+            event.preventDefault();
+            const textarea = form.querySelector('textarea[name="noi_dung"]');
+            const submitButton = form.querySelector('button[type="submit"]');
+            const errorMessage = form.querySelector('[data-review-reply-error]');
+            const card = form.closest('[data-review-card]');
+            const content = textarea.value.trim();
+
+            if (!content || submitButton.disabled) {
+                return;
+            }
+
+            submitButton.disabled = true;
+            errorMessage.textContent = '';
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': reviewCsrfToken,
+                    },
+                    body: new FormData(form),
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    const validationMessage = Object.values(data.errors || {}).flat()[0];
+                    throw new Error(validationMessage || data.message || 'Không thể gửi phản hồi.');
+                }
+
+                const reply = document.createElement('div');
+                reply.className = 'review-reply border-start ps-3 py-2 mb-2';
+
+                const heading = document.createElement('div');
+                heading.className = 'd-flex flex-wrap align-items-baseline gap-2 mb-1';
+                const author = document.createElement('strong');
+                author.className = 'small';
+                author.textContent = data.reply.user_name;
+                const timestamp = document.createElement('small');
+                timestamp.className = 'text-muted';
+                timestamp.textContent = data.reply.ngay_tao;
+                heading.append(author, timestamp);
+
+                const replyContent = document.createElement('p');
+                replyContent.className = 'small text-secondary mb-0';
+                replyContent.style.whiteSpace = 'pre-line';
+                replyContent.textContent = data.reply.noi_dung;
+                reply.append(heading, replyContent);
+                card.querySelector('[data-review-replies]').append(reply);
+
+                const count = card.querySelector('[data-review-reply-count]');
+                count.textContent = Number(count.textContent) + 1;
+                textarea.value = '';
+            } catch (error) {
+                errorMessage.textContent = error.message;
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+    </script>
+@endPushOnce

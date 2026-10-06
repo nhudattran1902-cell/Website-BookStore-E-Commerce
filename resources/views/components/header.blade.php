@@ -34,6 +34,8 @@
                 class="top-bar-item text-decoration-none text-dark small position-relative">
                 <i class="bi bi-bag me-1"></i>
                 <span>Giỏ hàng</span>
+                <span data-cart-count class="cart-count-badge {{ $cartCount > 0 ? '' : 'd-none' }}"
+                    aria-label="{{ $cartCount }} sản phẩm trong giỏ">{{ $cartCount }}</span>
             </a>
 
             <!-- User / Member Section -->
@@ -42,10 +44,24 @@
                 <button type="button"
                     class="btn btn-sm btn-outline-dark rounded-pill px-3 py-1 ms-2 d-flex align-items-center gap-1"
                     data-bs-toggle="modal" data-bs-target="#smemberNotificationModal">
-                    <i class="bi bi-person-circle fs-6"></i>
+                    @if (Auth::user()->anh_dai_dien_url)
+                        <img src="{{ Auth::user()->anh_dai_dien_url }}"
+                            alt="Ảnh đại diện của {{ Auth::user()->ho_ten }}" class="rounded-circle object-fit-cover"
+                            width="26" height="26">
+                    @else
+                        <i class="bi bi-person-circle fs-6" aria-hidden="true"></i>
+                    @endif
                     <span class="fw-bold">{{ Auth::user()->ho_ten ?? Auth::user()->ten_dang_nhap }}</span>
                     <i class="bi bi-bell-fill text-warning ms-1"></i>
                 </button>
+                <form action="{{ route('logout') }}" method="POST" class="m-0">
+                    @csrf
+                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1"
+                        title="Đăng xuất" aria-label="Đăng xuất">
+                        <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                        <span class="d-none d-lg-inline ms-1">Đăng xuất</span>
+                    </button>
+                </form>
             @else
                 <!-- Chưa đăng nhập -->
                 <a href="{{ route('login') }}" class="btn btn-sm btn-dark rounded-pill px-3 py-1 ms-2">
@@ -157,41 +173,42 @@
                     <div class="tab-content p-3" id="smemberTabContent" style="max-height: 350px; overflow-y: auto;">
                         <!-- Tab Tất cả -->
                         <div class="tab-pane fade show active" id="all-notifications" role="tabpanel">
-                            <div class="notification-item p-2 mb-2 border-bottom">
-                                <div class="d-flex align-items-center gap-2 mb-1">
-                                    <span class="badge bg-danger">Ưu đãi</span>
-                                    <small class="text-muted">Hôm nay</small>
-                                </div>
-                                <p class="mb-0 small fw-bold">Mã giảm giá BOOKBOX10 đã có trong ví quà tặng của bạn!</p>
-                            </div>
-                            <div class="notification-item p-2 mb-2 border-bottom">
-                                <div class="d-flex align-items-center gap-2 mb-1">
-                                    <span class="badge bg-primary">Đơn hàng</span>
-                                    <small class="text-muted">Vừa xong</small>
-                                </div>
-                                <p class="mb-0 small">Cảm ơn bạn đã đồng hành cùng hệ thống sách BOOK & BOX.</p>
-                            </div>
+                            @forelse ($paymentNotifications as $paymentNotification)
+                                <a href="{{ route('customer.orders.show', $paymentNotification->data['order_id']) }}"
+                                    class="notification-item d-block p-2 mb-2 border-bottom text-decoration-none text-dark">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <span class="badge bg-success">Thanh toán demo</span>
+                                        <small class="text-muted">{{ $paymentNotification->created_at->diffForHumans() }}</small>
+                                    </div>
+                                    <p class="mb-0 small">{{ $paymentNotification->data['message'] }}</p>
+                                </a>
+                            @empty
+                                <p class="text-muted small text-center py-4 mb-0">Bạn chưa có thông báo thanh toán.</p>
+                            @endforelse
                         </div>
 
                         <!-- Tab Đơn hàng -->
                         <div class="tab-pane fade" id="orders-notifications" role="tabpanel">
-                            <div class="text-center py-4">
-                                <i class="bi bi-box-seam fs-1 text-muted d-block mb-2"></i>
-                                <a href="{{ route('customer.orders.index') }}" class="btn btn-sm btn-outline-danger">
-                                    Xem lịch sử đơn hàng
+                            @forelse ($paymentNotifications as $paymentNotification)
+                                <a href="{{ route('customer.orders.show', $paymentNotification->data['order_id']) }}"
+                                    class="notification-item d-block p-2 mb-2 border-bottom text-decoration-none text-dark">
+                                    <small class="text-muted d-block mb-1">{{ $paymentNotification->created_at->diffForHumans() }}</small>
+                                    <span class="small">{{ $paymentNotification->data['message'] }}</span>
                                 </a>
-                            </div>
+                            @empty
+                                <div class="text-center py-4">
+                                    <i class="bi bi-box-seam fs-1 text-muted d-block mb-2"></i>
+                                    <a href="{{ route('customer.orders.index') }}" class="btn btn-sm btn-outline-danger">
+                                        Xem lịch sử đơn hàng
+                                    </a>
+                                </div>
+                            @endforelse
                         </div>
 
                         <!-- Tab CSKH -->
                         <div class="tab-pane fade" id="cskh-notifications" role="tabpanel">
-                            <div class="notification-item p-2 mb-2 border-bottom">
-                                <div class="d-flex align-items-center gap-2 mb-1">
-                                    <span class="badge bg-success">Hỗ trợ</span>
-                                    <small class="text-muted">24/7</small>
-                                </div>
-                                <p class="mb-0 small">Nếu cần hỗ trợ gấp, vui lòng liên hệ hotline hoặc dùng Live Chat ở
-                                    góc màn hình.</p>
+                            <div id="customer-cskh-messages" class="d-flex flex-column gap-2" role="log" aria-live="polite">
+                                <p class="text-muted small text-center mb-0">Đang tải trao đổi hỗ trợ...</p>
                             </div>
                         </div>
                     </div>
@@ -207,4 +224,100 @@
             </div>
         </div>
     </div>
+@endauth
+
+@auth
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const modal = document.getElementById('smemberNotificationModal');
+            const supportTab = document.getElementById('cskh-tab');
+            const messagesContainer = document.getElementById('customer-cskh-messages');
+            let refreshTimer = null;
+            let isLoading = false;
+
+            if (!modal || !supportTab || !messagesContainer) {
+                return;
+            }
+
+            function renderMessages(messages) {
+                messagesContainer.replaceChildren();
+
+                if (messages.length === 0) {
+                    const emptyState = document.createElement('p');
+                    emptyState.className = 'text-muted small text-center mb-0 py-3';
+                    emptyState.textContent = 'Bạn chưa có trao đổi với bộ phận CSKH.';
+                    messagesContainer.append(emptyState);
+                    return;
+                }
+
+                messages.forEach((message) => {
+                    const isCustomer = message.nguoi_gui === 'khach_hang';
+                    const row = document.createElement('div');
+                    row.className = `p-2 border-bottom ${isCustomer ? 'text-end' : ''}`;
+
+                    const sender = document.createElement('small');
+                    sender.className = `d-block fw-semibold mb-1 ${isCustomer ? 'text-muted' : 'text-success'}`;
+                    sender.textContent = isCustomer ? 'Bạn' : 'BOOK & BOX · CSKH';
+
+                    const content = document.createElement('p');
+                    content.className = 'small mb-1';
+                    content.style.whiteSpace = 'pre-line';
+                    content.textContent = message.noi_dung;
+
+                    const timestamp = document.createElement('small');
+                    timestamp.className = 'd-block text-muted';
+                    timestamp.textContent = message.ngay_tao || '';
+
+                    row.append(sender, content, timestamp);
+                    messagesContainer.append(row);
+                });
+
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            async function loadSupportMessages() {
+                if (isLoading) {
+                    return;
+                }
+
+                isLoading = true;
+                try {
+                    const response = await fetch(@json(route('support.messages')), {
+                        headers: { Accept: 'application/json' },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Không tải được trao đổi CSKH. Vui lòng thử lại.');
+                    }
+
+                    const data = await response.json();
+                    renderMessages(data.messages || []);
+                } catch (error) {
+                    messagesContainer.textContent = error.message;
+                } finally {
+                    isLoading = false;
+                }
+            }
+
+            function startRefreshing() {
+                loadSupportMessages();
+                if (!refreshTimer) {
+                    refreshTimer = window.setInterval(loadSupportMessages, 4000);
+                }
+            }
+
+            supportTab.addEventListener('shown.bs.tab', startRefreshing);
+            modal.addEventListener('shown.bs.modal', () => {
+                if (supportTab.classList.contains('active')) {
+                    startRefreshing();
+                }
+            });
+            modal.addEventListener('hidden.bs.modal', () => {
+                if (refreshTimer) {
+                    window.clearInterval(refreshTimer);
+                    refreshTimer = null;
+                }
+            });
+        });
+    </script>
 @endauth

@@ -104,14 +104,15 @@
                                                     </div>
                                                     <div class="mb-3">
                                                         <label class="form-label fw-bold">Ảnh đại diện</label>
-                                                        <input type="file" name="anh_dai_dien" class="form-control" accept="image/*">
-                                                        @if ($author->anh_dai_dien)
-                                                            <div class="mt-2">
-                                                                <small class="text-muted d-block mb-1">Ảnh hiện tại:</small>
-                                                                <img src="{{ asset('storage/' . $author->anh_dai_dien) }}"
-                                                                    class="rounded" style="height: 60px;">
-                                                            </div>
-                                                        @endif
+                                                        <input type="file" id="author-image-input-{{ $author->id }}" name="anh_dai_dien" class="form-control" accept="image/*"
+                                                            data-image-preview="author-image-preview-{{ $author->id }}">
+                                                        <div class="mt-2">
+                                                            <small class="text-muted d-block mb-1">Ảnh hiện tại:</small>
+                                                            <img id="author-image-preview-{{ $author->id }}"
+                                                                src="{{ $author->anh_dai_dien ? asset('storage/' . $author->anh_dai_dien) : asset('images/no-avatar.jpg') }}"
+                                                                class="rounded" style="height: 60px; object-fit: cover;">
+                                                            <label for="author-image-input-{{ $author->id }}" class="btn btn-sm btn-outline-primary ms-2">Thay đổi ảnh</label>
+                                                        </div>
                                                     </div>
                                                     <div class="mb-3">
                                                         <label class="form-label fw-bold">Tiểu sử</label>
@@ -161,7 +162,10 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Ảnh đại diện</label>
-                            <input type="file" name="anh_dai_dien" class="form-control" accept="image/*">
+                            <input type="file" name="anh_dai_dien" class="form-control" accept="image/*"
+                                data-image-preview="new-author-image-preview">
+                            <img id="new-author-image-preview" class="rounded mt-2 d-none"
+                                style="height: 60px; object-fit: cover;" alt="Xem trước ảnh tác giả">
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Tiểu sử</label>
@@ -177,3 +181,26 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        document.querySelectorAll('[data-image-preview]').forEach((input) => {
+            input.addEventListener('change', () => {
+                const image = document.getElementById(input.dataset.imagePreview);
+                const file = input.files[0];
+
+                if (!image || !file) {
+                    return;
+                }
+
+                if (image.dataset.previewUrl) {
+                    URL.revokeObjectURL(image.dataset.previewUrl);
+                }
+
+                image.dataset.previewUrl = URL.createObjectURL(file);
+                image.src = image.dataset.previewUrl;
+                image.classList.remove('d-none');
+            });
+        });
+    </script>
+@endpush

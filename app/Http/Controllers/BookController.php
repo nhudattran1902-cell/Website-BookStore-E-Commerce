@@ -3,43 +3,94 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sach;
-use App\Models\TheLoai;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class BookController extends Controller
 {
-    /**
-     * Hiển thị danh sách sách cửa hàng (lọc thể loại, sắp xếp giá, phân trang)
-     */
+    /** Hiển thị sách theo chủ đề, bộ truyện và tập. */
     public function index(Request $request): View
     {
-        // 1. Lấy danh sách thể loại cho sidebar/menu lọc
-        $categories = TheLoai::all();
-
-        // 2. Truy vấn danh sách sách đang hoạt động kèm thông tin tác giả và kho hàng
-        $query = Sach::with(['tacGia', 'khoHang'])
+        $query = Sach::with(['tacGia', 'khoHang', 'theLoai'])
             ->where('dang_hoat_dong', true);
 
-        // 3. Lọc theo thể loại nếu người dùng chọn
         if ($request->filled('the_loai')) {
             $query->where('id_the_loai', $request->the_loai);
         }
 
-        // 4. Sắp xếp theo giá hoặc ID mới nhất
         $sort = $request->input('sort');
         if ($sort === 'price_asc') {
             $query->orderBy('gia_ban', 'asc');
         } elseif ($sort === 'price_desc') {
             $query->orderBy('gia_ban', 'desc');
         } else {
-            $query->orderBy('id', 'desc');
+            $query->orderBy('tieu_de');
         }
 
-        // 5. Phân trang 8 cuốn/trang và giữ lại query string khi đổi trang
-        $books = $query->paginate(8)->withQueryString();
+        $books = $query->get();
+        $topics = $books
+            ->groupBy(fn (Sach $book): string => (string) ($book->id_the_loai ?? 'uncategorized'))
+            ->map(function (Collection $topicBooks): array {
+                /** @var Sach $firstBook */
+                $firstBook = $topicBooks->first();
+                $series = $topicBooks
+                    ->groupBy(function (Sach $book): string {
+                        $details = $this->seriesDetails($book->tieu_de);
+                        $book->setAttribute('catalog_series_name', $details['name']);
+                        $book->setAttribute('catalog_volume_label', $details['volume_label']);
+                        $book->setAttribute('catalog_volume_order', $details['volume_order']);
 
-        return view('books.index', compact('books', 'categories'));
+                        return $details['name'];
+                    })
+                    ->map(function (Collection $volumes): array {
+                        return [
+                            'name' => $volumes->first()->getAttribute('catalog_series_name'),
+                            'volumes' => $volumes
+                                ->sortBy(fn (Sach $book): array => [
+                                    $book->getAttribute('catalog_volume_order'),
+                                    $book->getAttribute('catalog_volume_label'),
+                                    $book->id,
+                                ])
+                                ->values(),
+                        ];
+                    })
+                    ->values();
+
+                return [
+                    'id' => $firstBook->id_the_loai ?? 'uncategorized',
+                    'name' => $firstBook->theLoai?->ten_the_loai ?? 'Chưa phân loại',
+                    'book_count' => $topicBooks->count(),
+                    'series' => $series,
+                ];
+            })
+            ->values();
+
+        return view('books.catalog', compact('topics'));
+    }
+
+    /**
+     * @return array{name: string, volume_label: string, volume_order: int}
+     */
+    private function seriesDetails(string $title): array
+    {
+        $pattern = '/^(?<series>.+?)\s*-\s*(?:Tập\s*-\s*)?(?<type>Tập|Phần|Môn|Bộ)\s*(?<number>\d+)(?:\s*:\s*(?<subtitle>.*))?$/iu';
+
+        if (! preg_match($pattern, $title, $matches)) {
+            return [
+                'name' => 'Sách lẻ',
+                'volume_label' => $title,
+                'volume_order' => 1,
+            ];
+        }
+
+        $subtitle = trim($matches['subtitle'] ?? '');
+
+        return [
+            'name' => trim($matches['series']),
+            'volume_label' => trim($matches['type'].' '.$matches['number'].($subtitle !== '' ? ': '.$subtitle : '')),
+            'volume_order' => (int) $matches['number'],
+        ];
     }
 
     /**
@@ -77,7 +128,7 @@ class BookController extends Controller
                 ->whereIn('id', $idsToFetch)
                 ->get()
                 // Giữ nguyên thứ tự xem gần đây nhất từ mảng Session
-                ->sortBy(fn($item) => array_search($item->id, $idsToFetch));
+                ->sortBy(fn ($item) => array_search($item->id, $idsToFetch));
         }
 
         // 4. Lấy danh sách tác giả (alias cho view cũ)
@@ -91,7 +142,12 @@ class BookController extends Controller
 
         // 6. Lấy danh sách đánh giá đã duyệt (da_duyet = true) kèm người dùng
         $reviews = $book->danhGia()
-            ->with('nguoiDung')
+            ->with([
+                'nguoiDung',
+                'binhLuans.nguoiDung',
+                'luotThich' => fn ($query) => $query->where('user_id', auth()->id()),
+            ])
+            ->withCount(['binhLuans', 'luotThich'])
             ->where('da_duyet', true)
             ->latest('ngay_tao')
             ->paginate(5);

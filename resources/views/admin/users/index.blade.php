@@ -24,7 +24,7 @@
                         <tr>
                             <td>
                                 <div class="d-flex align-items-center gap-2">
-                                    <img src="{{ $nd->anh_dai_dien ? asset('storage/' . $nd->anh_dai_dien) : asset('admin_assets/images/avatar.png') }}"
+                                    <img src="{{ $nd->anh_dai_dien_url ?: asset('admin_assets/images/avatar.png') }}"
                                         class="rounded-circle" width="35" height="35">
                                     <span class="fw-bold">{{ $nd->ho_ten }}</span>
                                 </div>

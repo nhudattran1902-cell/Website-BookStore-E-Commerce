@@ -39,7 +39,7 @@
                             <label class="form-label fw-bold">Mật khẩu <span class="text-danger">*</span></label>
                             <input type="password" name="mat_khau"
                                 class="form-control @error('mat_khau') is-invalid @enderror" required
-                                placeholder="Tối thiểu 6 ký tự">
+                                placeholder="Tối thiểu 8 ký tự">
                             @error('mat_khau')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror

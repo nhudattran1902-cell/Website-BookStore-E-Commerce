@@ -17,6 +17,16 @@
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
                     @endif
+                    @if ($errors->any())
+                        <div class="alert alert-danger mb-4" role="alert">
+                            <div class="fw-bold mb-1">Không thể tiếp tục thanh toán:</div>
+                            <ul class="mb-0 ps-3">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
                     <form action="{{ route('checkout.process') }}" method="POST" id="checkoutForm">
                         @csrf
 
@@ -62,7 +72,7 @@
                             <label
                                 class="border rounded-3 p-3 d-flex align-items-center cursor-pointer hover-border-danger">
                                 <input type="radio" name="phuong_thuc_thanh_toan" value="COD"
-                                    class="form-check-input me-3" checked>
+                                    class="form-check-input me-3" @checked(old('phuong_thuc_thanh_toan', 'COD') === 'COD')>
                                 <div class="flex-grow-1">
                                     <div class="fw-bold"><i class="bi bi-cash-stack text-success me-1"></i> Thanh toán khi
                                         nhận hàng (COD)</div>
@@ -74,7 +84,7 @@
                             <label
                                 class="border rounded-3 p-3 d-flex align-items-center cursor-pointer hover-border-danger">
                                 <input type="radio" name="phuong_thuc_thanh_toan" value="MoMo"
-                                    class="form-check-input me-3">
+                                    class="form-check-input me-3" @checked(old('phuong_thuc_thanh_toan') === 'MoMo')>
                                 <div class="flex-grow-1">
                                     <div class="fw-bold text-danger"><i class="bi bi-wallet2 me-1"></i> Ví điện tử MoMo
                                     </div>
@@ -85,17 +95,28 @@
                             <label
                                 class="border rounded-3 p-3 d-flex align-items-center cursor-pointer hover-border-danger">
                                 <input type="radio" name="phuong_thuc_thanh_toan" value="VNPay"
-                                    class="form-check-input me-3">
+                                    class="form-check-input me-3" @checked(old('phuong_thuc_thanh_toan') === 'VNPay')>
                                 <div class="flex-grow-1">
                                     <div class="fw-bold text-primary"><i class="bi bi-qr-code-scan me-1"></i> Cổng thanh
                                         toán VNPay</div>
                                     <small class="text-muted">Thanh toán qua quét mã QR Ngân hàng / Internet Banking</small>
                                 </div>
                             </label>
+
+                            <label class="border rounded-3 p-3 d-flex align-items-center cursor-pointer hover-border-danger">
+                                <input type="radio" name="phuong_thuc_thanh_toan" value="BankTransfer"
+                                    class="form-check-input me-3" @checked(old('phuong_thuc_thanh_toan') === 'BankTransfer')>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold text-success"><i class="bi bi-bank me-1"></i> Chuyển khoản VietQR</div>
+                                    <small class="text-muted">Đơn được xác nhận sau khi đối soát giao dịch ngân hàng</small>
+                                </div>
+                            </label>
                         </div>
 
+                        <p class="small text-muted mb-4">Đơn thanh toán trực tuyến sẽ được giữ hàng tối đa 15 phút. Bạn sẽ chuyển tới cổng tương ứng sau khi đặt hàng.</p>
+
                         <button type="submit" class="btn btn-danger btn-lg w-100 rounded-pill fw-bold shadow-sm py-3">
-                            <i class="bi bi-check-circle-fill me-2"></i> Xác Nhận Đặt Hàng
+                            <i class="bi bi-receipt me-2"></i> Đặt hàng & tiếp tục thanh toán
                         </button>
                     </form>
                 </div>
@@ -109,7 +130,7 @@
                     <div class="cart-items-summary overflow-auto mb-3" style="max-height: 320px;">
                         @forelse($cartItems as $item)
                             <div class="d-flex align-items-center mb-3 pb-2 border-bottom">
-                                <img src="{{ $item->sach->anh_bia ? asset('storage/' . $item->sach->anh_bia) : asset('images/no-cover.jpg') }}"
+                                <img src="{{ $item->sach->anh_bia_url ?: asset('images/no-cover.jpg') }}"
                                     class="rounded-2 me-3" style="width: 50px; height: 68px; object-fit: cover;">
                                 <div class="flex-grow-1 pe-2">
                                     <h6 class="fw-bold mb-1 text-truncate-2 small">{{ $item->sach->tieu_de }}</h6>

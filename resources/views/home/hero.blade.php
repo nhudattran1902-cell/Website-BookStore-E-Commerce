@@ -1,4 +1,4 @@
-<div id="heroCarousel" class="carousel slide carousel-fade mb-5 shadow-sm rounded-4 overflow-hidden"
+<div id="heroCarousel" class="carousel slide carousel-fade mb-5 shadow-sm rounded-4 overflow-hidden literary-hero"
     data-bs-ride="carousel" data-bs-interval="5000">
     <!-- Carousel Indicators -->
     <div class="carousel-indicators mb-3">
@@ -13,7 +13,7 @@
         <!-- Slide 1 -->
         <div class="carousel-item active">
             <div class="position-relative bg-dark text-white rounded-4 overflow-hidden" style="min-height: 380px;">
-                <img src="{{ asset('images/banner1.jpg') }}"
+                <img src="{{ asset('storage\covers\b3.jpg') }}"
                     class="d-block w-100 object-fit-cover position-absolute top-0 start-0 h-100 opacity-75"
                     alt="Khuyến mãi sách mới"
                     onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none');">
@@ -45,7 +45,7 @@
         <!-- Slide 2 -->
         <div class="carousel-item">
             <div class="position-relative bg-dark text-white rounded-4 overflow-hidden" style="min-height: 380px;">
-                <img src="{{ asset('images/banner2.jpg') }}"
+                <img src="{{ asset('storage\covers\b1.jpg') }}"
                     class="d-block w-100 object-fit-cover position-absolute top-0 start-0 h-100 opacity-75"
                     alt="Manga Comic Hot"
                     onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none');">
@@ -76,7 +76,7 @@
         <!-- Slide 3 -->
         <div class="carousel-item">
             <div class="position-relative bg-dark text-white rounded-4 overflow-hidden" style="min-height: 380px;">
-                <img src="{{ asset('images/banner3.jpg') }}"
+                <img src="{{ asset('storage\covers\b2.jpg') }}"
                     class="d-block w-100 object-fit-cover position-absolute top-0 start-0 h-100 opacity-75"
                     alt="Sách kỹ năng sống"
                     onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none');">

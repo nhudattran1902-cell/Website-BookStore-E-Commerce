@@ -5,9 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\DonHang;
 use App\Models\KhoHang;
-use App\Models\Sach;
 use App\Models\NguoiDung;
-use Illuminate\Http\Request;
+use App\Models\Sach;
+use App\Models\TinNhanChat;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
@@ -35,6 +36,24 @@ class DashboardController extends Controller
         $tongDauSach = Sach::count();
         $tongKhachHang = NguoiDung::count();
 
+        // 6. Tin nhắn khách mới nhất để hỗ trợ trực tiếp từ Dashboard
+        $hasChatTable = Schema::hasTable('tin_nhan_chat');
+
+        $tinNhanHoTroMoi = $hasChatTable
+            ? TinNhanChat::with('nguoiDung')
+                ->kenh(TinNhanChat::KENH_CSKH)
+                ->latest('ngay_tao')
+                ->limit(5)
+                ->get()
+            : collect();
+
+        $tinHoTroChuaDoc = $hasChatTable
+            ? TinNhanChat::kenh(TinNhanChat::KENH_CSKH)
+                ->where('nguoi_gui', 'khach_hang')
+                ->where('da_doc', false)
+                ->count()
+            : 0;
+
         // Truyền tất cả dữ liệu sang view admin.dashboard
         return view('admin.dashboard', compact(
             'tongDoanhThu',
@@ -42,7 +61,9 @@ class DashboardController extends Controller
             'tongSachTonKho',
             'donHangGanDay',
             'tongDauSach',
-            'tongKhachHang'
+            'tongKhachHang',
+            'tinNhanHoTroMoi',
+            'tinHoTroChuaDoc'
         ));
     }
 }

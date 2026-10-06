@@ -32,20 +32,38 @@
         </div>
         <div class="col-md-7">
             <h5 class="fw-bold mb-3">Gửi tin nhắn cho chúng tôi</h5>
-            <form>
+            @if (session('contact_success'))
+                <div class="alert alert-success" role="status">{{ session('contact_success') }}</div>
+            @endif
+            @if ($errors->any())
+                <div class="alert alert-danger" role="alert">
+                    <ul class="mb-0">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+            <form action="{{ route('pages.contact.send') }}" method="POST">
+                @csrf
                 <div class="mb-3">
-                    <label class="form-label">Họ và tên</label>
-                    <input type="text" class="form-control" placeholder="Nguyễn Văn A">
+                    <label class="form-label" for="contact-name">Họ và tên</label>
+                    <input id="contact-name" type="text" name="ten_lien_he" class="form-control"
+                        value="{{ old('ten_lien_he', Auth::user()?->ho_ten ?? '') }}" required maxlength="150"
+                        placeholder="Nguyễn Văn A">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    <input type="email" class="form-control" placeholder="email@example.com">
+                    <label class="form-label" for="contact-email">Email</label>
+                    <input id="contact-email" type="email" name="email_lien_he" class="form-control"
+                        value="{{ old('email_lien_he', Auth::user()?->email ?? '') }}" required maxlength="255"
+                        placeholder="email@example.com">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Nội dung</label>
-                    <textarea class="form-control" rows="5" placeholder="Nhập nội dung tin nhắn..."></textarea>
+                    <label class="form-label" for="contact-message">Nội dung</label>
+                    <textarea id="contact-message" name="noi_dung" class="form-control" rows="5" maxlength="2000"
+                        required placeholder="Nhập nội dung tin nhắn...">{{ old('noi_dung') }}</textarea>
                 </div>
-                <button type="submit" class="btn btn-dark px-4">Gửi tin nhắn</button>
+                <button type="submit" class="btn btn-dark px-4"><i class="bi bi-send me-1"></i>Gửi tin nhắn</button>
             </form>
         </div>
     </div>

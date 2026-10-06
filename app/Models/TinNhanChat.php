@@ -2,12 +2,18 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TinNhanChat extends Model
 {
     use HasFactory;
+
+    public const KENH_CHATBOT = 'chatbot';
+
+    public const KENH_CSKH = 'cskh';
 
     protected $table = 'tin_nhan_chat';
 
@@ -18,18 +24,25 @@ class TinNhanChat extends Model
     protected $fillable = [
         'id_nguoi_dung',
         'session_id',
+        'kenh',
+        'ten_khach',
         'id_admin',
         'nguoi_gui',
         'noi_dung',
         'da_doc',
     ];
 
-    public function nguoiDung()
+    public function scopeKenh(Builder $query, string $kenh): Builder
+    {
+        return $query->where('kenh', $kenh);
+    }
+
+    public function nguoiDung(): BelongsTo
     {
         return $this->belongsTo(NguoiDung::class, 'id_nguoi_dung');
     }
 
-    public function admin()
+    public function admin(): BelongsTo
     {
         return $this->belongsTo(NguoiDung::class, 'id_admin');
     }

@@ -20,6 +20,12 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         @endif
+        @if (session('error'))
+            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
 
         {{-- TIMELINE TIẾN TRÌNH ĐƠN HÀNG --}}
         @php
@@ -32,6 +38,13 @@
             $isCanceled = $order->trang_thai === 'da_huy';
             $statusKeys = array_keys($statuses);
             $currentIndex = array_search($order->trang_thai, $statusKeys);
+            $nextStatuses = [
+                'cho_xu_ly' => ['dang_xu_ly', 'da_huy'],
+                'dang_xu_ly' => ['dang_giao', 'da_huy'],
+                'dang_giao' => ['hoan_thanh'],
+                'hoan_thanh' => [],
+                'da_huy' => [],
+            ][$order->trang_thai] ?? [];
         @endphp
 
         <div class="card border-0 shadow-sm mb-4">
@@ -84,7 +97,7 @@
                                         <tr>
                                             <td class="ps-3">
                                                 <div class="d-flex align-items-center">
-                                                    <img src="{{ $item->sach->anh_bia ? asset('storage/' . $item->sach->anh_bia) : asset('images/no-cover.jpg') }}"
+                                                    <img src="{{ $item->sach?->anh_bia_url ?: asset('images/no-cover.jpg') }}"
                                                         class="rounded me-3 shadow-sm"
                                                         style="width: 40px; height: 55px; object-fit: cover;">
                                                     <div>
@@ -134,24 +147,56 @@
                             @csrf
                             @method('PUT')
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Trạng thái hiện tại</label>
+                                <label class="form-label fw-bold">Chuyển trạng thái từ {{ $order->trang_thai }}</label>
                                 <select name="trang_thai" class="form-select">
-                                    <option value="cho_xu_ly" {{ $order->trang_thai == 'cho_xu_ly' ? 'selected' : '' }}>Chờ
-                                        xử lý</option>
-                                    <option value="dang_xu_ly" {{ $order->trang_thai == 'dang_xu_ly' ? 'selected' : '' }}>
-                                        Đang xử lý</option>
-                                    <option value="dang_giao" {{ $order->trang_thai == 'dang_giao' ? 'selected' : '' }}>
-                                        Đang giao hàng</option>
-                                    <option value="hoan_thanh" {{ $order->trang_thai == 'hoan_thanh' ? 'selected' : '' }}>
-                                        Hoàn thành</option>
-                                    <option value="da_huy" {{ $order->trang_thai == 'da_huy' ? 'selected' : '' }}>Hủy đơn
-                                        hàng</option>
+                                    @foreach ($nextStatuses as $nextStatus)
+                                        <option value="{{ $nextStatus }}">{{ str_replace('_', ' ', ucfirst($nextStatus)) }}</option>
+                                    @endforeach
                                 </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Ghi chú</label>
+                                <textarea name="ghi_chu" class="form-control" maxlength="500" rows="2"></textarea>
                             </div>
                             <button type="submit" class="btn btn-primary w-100 fw-bold">
                                 <i class="bi bi-save me-1"></i> Lưu thay đổi
                             </button>
                         </form>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-dark text-white fw-bold">Thông tin vận chuyển</div>
+                    <div class="card-body">
+                        @if (in_array($order->trang_thai, ['dang_xu_ly', 'dang_giao'], true))
+                            <form action="{{ route('admin.orders.updateShipping', $order->id) }}" method="POST">
+                                @csrf
+                                @method('PUT')
+                                <div class="mb-3">
+                                    <label class="form-label">Đơn vị</label>
+                                    <select name="don_vi_van_chuyen" class="form-select" required>
+                                        <option value="">Chọn hãng vận chuyển</option>
+                                        <option value="GHN" @selected($order->don_vi_van_chuyen === 'GHN')>GHN</option>
+                                        <option value="GHTK" @selected($order->don_vi_van_chuyen === 'GHTK')>GHTK</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Mã vận đơn</label>
+                                    <input name="ma_van_don" class="form-control" value="{{ $order->ma_van_don }}" maxlength="100" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Link theo dõi</label>
+                                    <input name="tracking_url" type="url" class="form-control" value="{{ $order->tracking_url }}" maxlength="500">
+                                </div>
+                                <button type="submit" class="btn btn-outline-primary w-100">Lưu vận đơn</button>
+                            </form>
+                        @else
+                            <p class="mb-1"><strong>Đơn vị:</strong> {{ $order->don_vi_van_chuyen ?: 'Chưa tạo vận đơn' }}</p>
+                            <p class="mb-1"><strong>Mã vận đơn:</strong> {{ $order->ma_van_don ?: 'Chưa có' }}</p>
+                            @if ($order->tracking_url)
+                                <a href="{{ $order->tracking_url }}" target="_blank" rel="noopener noreferrer">Mở tracking</a>
+                            @endif
+                        @endif
                     </div>
                 </div>
 
@@ -166,19 +211,21 @@
                         <p class="mb-2"><strong>Số điện thoại:</strong> {{ $order->sdt_nguoi_nhan ?? 'Chưa cập nhật' }}
                         </p>
                         <p class="mb-2"><strong>Địa chỉ nhận hàng:</strong>
-                            {{ $order->dia_chi_giao_hang ?? 'Chưa cập nhật' }}</p>
+                            {{ $order->dia_chi_nhan ?: ($order->dia_chi_giao_hang ?? 'Chưa cập nhật') }}</p>
                         <hr>
                         <p class="mb-2">
                             <strong>Phương thức thanh toán:</strong>
                             @php
                                 $pt = strtolower(
-                                    $order->thanhToan->phuong_thuc ?? ($order->phuong_thuc_thanh_toan ?? 'cod'),
+                                    $order->thanhToan->phuong_thuc_thanh_toan ?? ($order->phuong_thuc_thanh_toan ?? 'cod'),
                                 );
                             @endphp
                             @if ($pt === 'momo')
                                 <span class="badge bg-danger">MoMo</span>
                             @elseif($pt === 'vnpay')
                                 <span class="badge bg-primary">VNPay</span>
+                            @elseif($pt === 'banktransfer')
+                                <span class="badge bg-success">Chuyển khoản VietQR</span>
                             @else
                                 <span class="badge bg-secondary">COD (Tiền mặt)</span>
                             @endif
@@ -191,9 +238,46 @@
                                 <span class="badge bg-warning text-dark">Chờ thanh toán</span>
                             @endif
                         </p>
+                        @if (($order->thanhToan->phuong_thuc_thanh_toan ?? null) === 'BankTransfer'
+                            && ($order->thanhToan->trang_thai ?? null) === 'cho_thanh_toan')
+                            <form action="{{ route('admin.orders.payment.confirmBankTransfer', $order->id) }}" method="POST" class="border-top mt-3 pt-3">
+                                @csrf
+                                <div class="mb-2">
+                                    <label class="form-label small">Số tiền đã nhận</label>
+                                    <input name="so_tien" type="number" min="1" class="form-control form-control-sm" value="{{ $order->thanhToan->so_tien }}" required>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small">Mã giao dịch ngân hàng</label>
+                                    <input name="ma_giao_dich" class="form-control form-control-sm" maxlength="100" required>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small">Chữ ký SIG trong nội dung chuyển khoản</label>
+                                    <input name="signature" class="form-control form-control-sm font-monospace" pattern="[a-fA-F0-9]{64}" maxlength="64" required>
+                                </div>
+                                <button type="submit" class="btn btn-success btn-sm w-100">Đối soát và xác nhận</button>
+                            </form>
+                        @endif
                     </div>
                 </div>
             </div>
         </div>
+
+        @if ($order->lichSuDonHang->isNotEmpty())
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light fw-bold">Nhật ký đơn hàng</div>
+                <div class="card-body">
+                    @foreach ($order->lichSuDonHang as $event)
+                        <div class="border-start border-2 ps-3 pb-3 ms-1">
+                            <div class="fw-semibold">{{ $event->ghi_chu ?: $event->trang_thai_moi }}</div>
+                            <small class="text-muted">
+                                {{ $event->ngay_tao }}
+                                @if ($event->vi_tri) · {{ $event->vi_tri }} @endif
+                                @if ($event->nguoiThayDoi) · {{ $event->nguoiThayDoi->ho_ten }} @endif
+                            </small>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
     </div>
 @endsection

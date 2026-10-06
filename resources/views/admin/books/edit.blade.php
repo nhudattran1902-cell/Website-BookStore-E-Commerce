@@ -84,6 +84,17 @@
                             </div>
 
                             <div class="mb-3">
+                                <label class="form-label fw-bold">Giá ưu đãi tuần này (VNĐ)</label>
+                                <input type="number" name="gia_khuyen_mai"
+                                    class="form-control @error('gia_khuyen_mai') is-invalid @enderror"
+                                    value="{{ old('gia_khuyen_mai', $book->gia_khuyen_mai) }}" min="1" step="1000" placeholder="Để trống nếu không giảm giá">
+                                @error('gia_khuyen_mai')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <small class="form-text text-muted">Giá ưu đãi phải thấp hơn giá bán. Để trống để gỡ khỏi ưu đãi tuần.</small>
+                            </div>
+
+                            <div class="mb-3">
                                 <label class="form-label fw-bold">Mã ISBN</label>
                                 <input type="text" name="ma_isbn" class="form-control"
                                     value="{{ old('ma_isbn', $book->ma_isbn) }}">
@@ -98,10 +109,17 @@
                             <div class="mb-3">
                                 <label class="form-label fw-bold">Ảnh bìa hiện tại</label>
                                 <div class="mb-2">
-                                    <img src="{{ $book->anh_bia ? asset('storage/' . $book->anh_bia) : asset('images/no-cover.jpg') }}"
+                                    <img id="book-cover-preview"
+                                        src="{{ $book->anh_bia_url ?: asset('images/no-cover.jpg') }}"
                                         class="rounded img-thumbnail" style="height: 120px; object-fit: cover;">
+                                    <label for="book-cover-input" class="btn btn-sm btn-outline-primary ms-2">Thay đổi ảnh bìa</label>
                                 </div>
-                                <input type="file" name="anh_bia" class="form-control" accept="image/*">
+                                <input type="file" name="anh_bia" id="book-cover-input"
+                                    class="form-control @error('anh_bia') is-invalid @enderror" accept="image/*"
+                                    data-image-preview="book-cover-preview">
+                                @error('anh_bia')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
 
                             <div class="form-check form-switch mb-3">
@@ -120,3 +138,25 @@
         </form>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        document.querySelectorAll('[data-image-preview]').forEach((input) => {
+            input.addEventListener('change', () => {
+                const image = document.getElementById(input.dataset.imagePreview);
+                const file = input.files[0];
+
+                if (!image || !file) {
+                    return;
+                }
+
+                if (image.dataset.previewUrl) {
+                    URL.revokeObjectURL(image.dataset.previewUrl);
+                }
+
+                image.dataset.previewUrl = URL.createObjectURL(file);
+                image.src = image.dataset.previewUrl;
+            });
+        });
+    </script>
+@endpush

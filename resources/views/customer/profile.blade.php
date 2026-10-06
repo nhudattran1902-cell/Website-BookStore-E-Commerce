@@ -9,8 +9,16 @@
             <div class="col-md-3 mb-4">
                 <div class="card border-0 shadow-sm">
                     <div class="card-body text-center">
-                        <img src="{{ asset('images/avatar.png') }}" class="rounded-circle mb-3 border" width="100"
-                            height="100" alt="Avatar">
+                        @if ($user->anh_dai_dien_url)
+                            <img src="{{ $user->anh_dai_dien_url }}"
+                                class="rounded-circle mb-3 border object-fit-cover" width="100" height="100"
+                                alt="Ảnh đại diện của {{ $user->ho_ten }}">
+                        @else
+                            <div class="rounded-circle mb-3 border bg-light d-inline-flex align-items-center justify-content-center"
+                                style="width: 100px; height: 100px;" aria-label="Chưa có ảnh đại diện">
+                                <i class="bi bi-person fs-1 text-secondary" aria-hidden="true"></i>
+                            </div>
+                        @endif
                         <h5 class="fw-bold">{{ $user->ho_ten }}</h5>
                         <p class="text-muted small">{{ $user->email }}</p>
                     </div>
@@ -46,7 +54,7 @@
                         <h5 class="fw-bold mb-0">Thông tin cá nhân</h5>
                     </div>
                     <div class="card-body p-4">
-                        <form action="{{ route('customer.profile.update') }}" method="POST">
+                        <form action="{{ route('customer.profile.update') }}" method="POST" enctype="multipart/form-data">
                             @csrf
                             @method('PUT')
                             <div class="row mb-3">
@@ -65,6 +73,16 @@
                                 <label class="form-label">Email (Không thể thay đổi)</label>
                                 <input type="email" class="form-control text-muted" value="{{ $user->email }}" readonly
                                     disabled>
+                            </div>
+                            <div class="mb-3">
+                                <label for="anh_dai_dien" class="form-label">Ảnh đại diện</label>
+                                <input id="anh_dai_dien" type="file" name="anh_dai_dien"
+                                    class="form-control @error('anh_dai_dien') is-invalid @enderror"
+                                    accept="image/jpeg,image/png,image/webp">
+                                <div class="form-text">Chọn ảnh JPG, PNG hoặc WEBP, dung lượng tối đa 2 MB.</div>
+                                @error('anh_dai_dien')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                             <button type="submit" class="btn btn-dark px-4">Lưu thay đổi</button>
                         </form>

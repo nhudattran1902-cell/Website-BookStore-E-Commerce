@@ -90,6 +90,14 @@
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
+                    <a href="{{ route('admin.chat.index') }}"
+                        class="sidebar-menu-link {{ request()->routeIs('admin.chat.*') ? 'active' : '' }}"
+                        title="Hỗ trợ CSKH">
+                        <i class="bi bi-chat-dots"></i>
+                        <span>Hỗ trợ CSKH</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
                     <a href="{{ route('admin.reviews.index') }}"
                         class="sidebar-menu-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"
                         title="Đánh giá">
@@ -125,7 +133,7 @@
     <!-- Sidebar Profile Card -->
     <div class="sidebar-profile">
         @php $adminUser = Auth::user(); @endphp
-        <img src="{{ $adminUser && $adminUser->anh_dai_dien ? asset('storage/' . $adminUser->anh_dai_dien) : 'https://ui-avatars.com/api/?name=' . urlencode($adminUser->ho_ten ?? 'Admin') . '&background=1b4332&color=b4f105&size=48' }}"
+        <img src="{{ $adminUser?->anh_dai_dien_url ?: 'https://ui-avatars.com/api/?name=' . urlencode($adminUser->ho_ten ?? 'Admin') . '&background=1b4332&color=b4f105&size=48' }}"
             alt="{{ $adminUser->ho_ten ?? 'Admin' }}" class="sidebar-profile-img">
         <div class="sidebar-profile-info">
             <div class="sidebar-profile-name">{{ $adminUser->ho_ten ?? 'Quản trị viên' }}</div>

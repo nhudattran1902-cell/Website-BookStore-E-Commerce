@@ -13,7 +13,7 @@
                     12 Trịnh Đình Thảo, Phường Tân Phú<br />Thành Phố Hồ Chí Minh
                 </p>
                 <p class="mb-1 small fw-medium">
-                    <i class="bi bi-envelope me-1"></i> nhudattran1902@gmail.com
+                    <i class="bi bi-envelope me-1"></i> book&box@gmail.com
                 </p>
                 <p class="small fw-medium">
                     <i class="bi bi-telephone me-1"></i> +84 767417206
