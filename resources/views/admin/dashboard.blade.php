@@ -166,13 +166,17 @@
                                     <span class="legend-dot bg-forest-medium"></span>
                                     <span class="chart-legend-label">Doanh thu</span>
                                 </div>
+                                <a href="{{ route('admin.reports.revenue') }}" class="btn btn-sm btn-outline-primary">
+                                    Xem báo cáo
+                                </a>
                             </div>
                         </div>
                         <div class="d-flex align-items-baseline gap-2 mb-3">
                             <span class="stat-value-amount">{{ number_format($tongDoanhThu, 0, ',', '.') }} đ</span>
-                            <span class="trend-badge trend-up fs-xs">Tổng tích lũy</span>
+                            <span class="trend-badge trend-up fs-xs">Đã thanh toán</span>
                         </div>
-                        <div id="revenue-chart"></div>
+                        <div id="revenue-chart" data-labels="{{ implode(',', $revenueChartLabels) }}"
+                            data-values="{{ implode(',', $revenueChartValues) }}"></div>
                     </div>
                 </div>
 

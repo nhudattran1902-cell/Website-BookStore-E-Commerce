@@ -36,7 +36,7 @@
                         <div class="mb-3 form-check d-flex justify-content-between">
                             <div>
                                 <input type="checkbox" name="remember" class="form-check-input" id="remember">
-                                <label class="form-check-label" for="remember">Ghi nhớ đăng nhập</label>
+                                <label class="form-check-label" for="remember">Ghi nhớ đăng nhập (không áp dụng cho nhân viên/quản trị)</label>
                             </div>
                         </div>
 

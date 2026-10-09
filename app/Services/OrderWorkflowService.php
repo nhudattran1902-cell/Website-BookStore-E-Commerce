@@ -46,13 +46,13 @@ class OrderWorkflowService
         ?string $eventId = null,
         ?string $location = null,
     ): bool {
-        return DB::transaction(function () use ($orderId, $newStatus, $changedBy, $note, $source, $eventId, $location): bool {
+        $transitionResult = DB::transaction(function () use ($orderId, $newStatus, $changedBy, $note, $source, $eventId, $location): array {
             $order = DonHang::with('chiTietDonHang')
                 ->lockForUpdate()
                 ->findOrFail($orderId);
 
             if ($this->isDuplicateEvent($source, $eventId)) {
-                return false;
+                return ['transitioned' => false, 'restocked_book_ids' => []];
             }
 
             $currentStatus = $order->trang_thai;
@@ -89,6 +89,7 @@ class OrderWorkflowService
 
             $items = $order->chiTietDonHang->sortBy('id_sach');
             $stocks = $this->lockedStocks($items);
+            $restockedBookIds = [];
 
             if ($currentStatus === 'cho_xu_ly' && $newStatus === 'dang_xu_ly' && $order->da_giu_ton) {
                 foreach ($items->groupBy('id_sach') as $bookId => $bookItems) {
@@ -112,6 +113,8 @@ class OrderWorkflowService
                     if (! $stock) {
                         continue;
                     }
+
+                    $restockedBookIds[] = (int) $bookId;
 
                     if ($currentStatus === 'cho_xu_ly' && $order->da_giu_ton) {
                         if ($stock->so_luong_dat_truoc < $quantity) {
@@ -149,8 +152,17 @@ class OrderWorkflowService
 
             $this->writeLog($order, $currentStatus, $newStatus, $changedBy, $note, $source, $eventId, $location);
 
-            return true;
+            return [
+                'transitioned' => true,
+                'restocked_book_ids' => array_values(array_unique($restockedBookIds)),
+            ];
         }, attempts: 3);
+
+        foreach ($transitionResult['restocked_book_ids'] as $bookId) {
+            app(StockAvailabilityNotifier::class)->notifyIfAvailable($bookId);
+        }
+
+        return $transitionResult['transitioned'];
     }
 
     public function confirmPayment(string $orderCode, int $amount, string $transactionId, string $source): string

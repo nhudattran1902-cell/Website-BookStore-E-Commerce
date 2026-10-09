@@ -117,7 +117,7 @@
 
                 const bubble = document.createElement('div');
                 bubble.className = `p-2 rounded-3 text-break ${isCustomer ? 'bg-dark text-white' : 'bg-white border text-dark'}`;
-                bubble.style.maxWidth = '82%';
+                bubble.style.maxWidth = isCustomer ? '82%' : '96%';
                 bubble.style.fontSize = '0.875rem';
 
                 if (!isCustomer) {
@@ -128,14 +128,126 @@
                 }
 
                 const content = document.createElement('div');
-                content.style.whiteSpace = 'pre-line';
-                content.textContent = message.noi_dung;
+                appendFormattedMessage(content, message.noi_dung);
                 bubble.append(content);
                 row.append(bubble);
                 channel.container.append(row);
             });
 
             channel.container.scrollTop = channel.container.scrollHeight;
+        }
+
+        function appendFormattedMessage(container, message) {
+            const lines = String(message ?? '').split('\n');
+            let textLines = [];
+            let lineIndex = 0;
+
+            function flushText() {
+                if (textLines.length === 0) {
+                    return;
+                }
+
+                const paragraph = document.createElement('p');
+                paragraph.className = 'mb-2';
+                paragraph.style.whiteSpace = 'pre-line';
+                paragraph.textContent = textLines.join('\n');
+                container.append(paragraph);
+                textLines = [];
+            }
+
+            while (lineIndex < lines.length) {
+                const headers = parseMarkdownTableRow(lines[lineIndex]);
+                const separators = lineIndex + 1 < lines.length
+                    ? parseMarkdownTableRow(lines[lineIndex + 1])
+                    : null;
+                const isTable = headers !== null
+                    && separators !== null
+                    && separators.length === headers.length
+                    && separators.every((cell) => /^:?-{3,}:?$/.test(cell));
+
+                if (!isTable) {
+                    textLines.push(lines[lineIndex]);
+                    lineIndex++;
+                    continue;
+                }
+
+                flushText();
+                lineIndex += 2;
+
+                const rows = [];
+                while (lineIndex < lines.length) {
+                    const cells = parseMarkdownTableRow(lines[lineIndex]);
+                    if (cells === null || cells.length !== headers.length) {
+                        break;
+                    }
+
+                    rows.push(cells);
+                    lineIndex++;
+                }
+
+                appendTableCards(container, headers, rows);
+            }
+
+            flushText();
+        }
+
+        function parseMarkdownTableRow(line) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine.includes('|')) {
+                return null;
+            }
+
+            return trimmedLine
+                .replace(/^\|/, '')
+                .replace(/\|$/, '')
+                .split('|')
+                .map((cell) => cell.trim());
+        }
+
+        function appendTableCards(container, headers, rows) {
+            const titleIndex = headers.findIndex((header) => /tựa đề|tiêu đề|tên sách/i.test(header));
+            const cardList = document.createElement('div');
+            cardList.className = 'd-grid gap-2 mb-2';
+
+            rows.forEach((cells) => {
+                const card = document.createElement('div');
+                card.className = 'border rounded-2 p-2 bg-light';
+
+                if (titleIndex >= 0) {
+                    const title = document.createElement('div');
+                    title.className = 'fw-semibold mb-1';
+                    title.textContent = stripMarkdown(cells[titleIndex]);
+                    card.append(title);
+                }
+
+                cells.forEach((value, index) => {
+                    if (index === titleIndex || value === '') {
+                        return;
+                    }
+
+                    const field = document.createElement('div');
+                    field.className = 'd-flex justify-content-between align-items-start gap-2 small';
+
+                    const label = document.createElement('span');
+                    label.className = 'text-muted flex-shrink-0';
+                    label.textContent = stripMarkdown(headers[index]);
+
+                    const fieldValue = document.createElement('span');
+                    fieldValue.className = /giá/i.test(headers[index]) ? 'text-end fw-semibold' : 'text-end';
+                    fieldValue.textContent = stripMarkdown(value);
+
+                    field.append(label, fieldValue);
+                    card.append(field);
+                });
+
+                cardList.append(card);
+            });
+
+            container.append(cardList);
+        }
+
+        function stripMarkdown(value) {
+            return value.replace(/\*\*(.*?)\*\*/g, '$1').replace(/__(.*?)__/g, '$1').trim();
         }
 
         async function loadMessages(channelName) {

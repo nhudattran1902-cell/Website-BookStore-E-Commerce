@@ -3,17 +3,27 @@
 @section('title', 'Quản lý Kho hàng - BOOK & BOX Admin')
 
 @section('content')
+    @php
+        $canUpdateInventory = auth()->user()->hasPermission('inventory.update');
+        $canImportInventory = auth()->user()->hasPermission('inventory.import');
+        $canViewImports = auth()->user()->hasPermission('inventory.imports.view');
+    @endphp
     <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h3 class="fw-bold mb-1">Quản lý Kho hàng</h3>
                 <p class="text-muted mb-0">Theo dõi số lượng tồn kho và nhập hàng nhanh</p>
             </div>
-            @if (request('id_sach'))
-                <a href="{{ route('admin.inventory.index') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-x-circle me-1"></i> Xem tất cả sách
-                </a>
-            @endif
+                <div class="d-flex gap-2">
+                    @if ($canViewImports)
+                        <a href="{{ route('admin.inventory.imports.index') }}" class="btn btn-outline-primary">Phiếu nhập kho</a>
+                    @endif
+                    @if (request('id_sach'))
+                        <a href="{{ route('admin.inventory.index') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-1"></i> Xem tất cả sách
+                        </a>
+                    @endif
+                </div>
         </div>
 
         @if (session('success'))
@@ -95,18 +105,20 @@
                                 <th>Tên sách</th>
                                 <th>Thể loại</th>
                                 <th>Giá bán</th>
-                                <th>Tồn kho thực tế</th>
+                                <th>Tồn khả dụng</th>
                                 <th>Ngưỡng cảnh báo</th>
                                 <th>Vị trí lưu kho</th>
                                 <th>Kho</th>
                                 <th>Kinh doanh</th>
-                                <th class="text-end pe-3">Hành động</th>
+                                @if ($canUpdateInventory || $canImportInventory)
+                                    <th class="text-end pe-3">Hành động</th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($inventory as $item)
                                 @php
-                                    $sl = $item->so_luong_ton;
+                                    $sl = $item->so_luong_kha_dung;
                                     $nguong = $item->nguong_canh_bao ?? 5;
                                 @endphp
                                 <tr>
@@ -143,29 +155,31 @@
                                             <span class="badge bg-secondary-subtle text-secondary-emphasis">Ngừng bán</span>
                                         @endif
                                     </td>
+                                    @if ($canUpdateInventory || $canImportInventory)
                                     <td class="text-end pe-3">
-                                        {{-- Nút Nhập hàng nhanh mở Modal --}}
-                                        <button class="btn btn-sm btn-success me-1" data-bs-toggle="modal"
-                                            data-bs-target="#quickImportModal{{ $item->id }}">
-                                            <i class="bi bi-box-arrow-in-down me-1"></i> Nhập hàng
-                                        </button>
-
-                                        {{-- Nút Sửa cấu hình kho --}}
-                                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
-                                            data-bs-target="#editInventoryModal{{ $item->id }}">
-                                            <i class="bi bi-pencil-square"></i> Điều chỉnh
-                                        </button>
+                                        @if ($canImportInventory)
+                                            <button class="btn btn-sm btn-success me-1" data-bs-toggle="modal"
+                                                data-bs-target="#quickImportModal{{ $item->id }}">
+                                                <i class="bi bi-box-arrow-in-down me-1"></i> Nhập hàng
+                                            </button>
+                                        @endif
+                                        @if ($canUpdateInventory)
+                                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                                                data-bs-target="#editInventoryModal{{ $item->id }}">
+                                                <i class="bi bi-pencil-square"></i> Điều chỉnh
+                                            </button>
+                                        @endif
                                     </td>
+                                    @endif
                                 </tr>
 
-                                {{-- Modal Nhập Hàng Nhanh --}}
+                                @if ($canImportInventory)
                                 <div class="modal fade" id="quickImportModal{{ $item->id }}" tabindex="-1"
                                     aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered">
                                         <div class="modal-content">
-                                            <form action="{{ route('admin.inventory.update', $item->id) }}" method="POST">
+                                            <form action="{{ route('admin.inventory.quick-import', $item->id) }}" method="POST">
                                                 @csrf
-                                                @method('PUT')
                                                 <div class="modal-header bg-success text-white">
                                                     <h5 class="modal-title fw-bold">Nhập hàng nhanh:
                                                         {{ $item->sach->tieu_de ?? '' }}</h5>
@@ -174,7 +188,7 @@
                                                 </div>
                                                 <div class="modal-body">
                                                     <p class="mb-2">Tồn kho hiện tại: <strong
-                                                            class="text-primary">{{ $sl }} cuốn</strong></p>
+                                                            class="text-primary">{{ $item->so_luong_ton }} cuốn</strong></p>
                                                     <div class="mb-3">
                                                         <label class="form-label fw-bold">Số lượng nhập thêm <span
                                                                 class="text-danger">*</span></label>
@@ -192,8 +206,9 @@
                                         </div>
                                     </div>
                                 </div>
+                                @endif
 
-                                {{-- Modal Điều Chỉnh Trực Tiếp --}}
+                                @if ($canUpdateInventory)
                                 <div class="modal fade" id="editInventoryModal{{ $item->id }}" tabindex="-1"
                                     aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered">
@@ -211,7 +226,7 @@
                                                     <div class="mb-3">
                                                         <label class="form-label fw-bold">Số lượng tồn kho thực tế</label>
                                                         <input type="number" name="so_luong_ton" class="form-control"
-                                                            value="{{ $sl }}" min="0" required>
+                                                            value="{{ $item->so_luong_ton }}" min="0" required>
                                                     </div>
                                                     <div class="mb-3">
                                                         <label class="form-label fw-bold">Ngưỡng cảnh báo sắp hết</label>
@@ -240,9 +255,10 @@
                                         </div>
                                     </div>
                                 </div>
+                                @endif
                             @empty
                                 <tr>
-                                    <td colspan="11" class="text-center py-4 text-muted">Không có sách phù hợp bộ lọc.</td>
+                                    <td colspan="{{ $canUpdateInventory || $canImportInventory ? 11 : 10 }}" class="text-center py-4 text-muted">Không có sách phù hợp bộ lọc.</td>
                                 </tr>
                             @endforelse
                         </tbody>

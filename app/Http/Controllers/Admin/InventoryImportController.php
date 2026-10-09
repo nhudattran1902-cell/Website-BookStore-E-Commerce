@@ -8,6 +8,8 @@ use App\Models\KhoHang;
 use App\Models\NhaXuatBan;
 use App\Models\PhieuNhapKho;
 use App\Models\Sach;
+use App\Services\AdminActionLogger;
+use App\Services\StockAvailabilityNotifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -34,8 +36,11 @@ class InventoryImportController extends Controller
         return view('admin.inventory.import_create', compact('publishers', 'books'));
     }
 
-    public function store(Request $request): RedirectResponse
-    {
+    public function store(
+        Request $request,
+        StockAvailabilityNotifier $stockNotifier,
+        AdminActionLogger $actionLogger,
+    ): RedirectResponse {
         $data = $request->validate([
             'id_nha_xuat_ban' => ['nullable', 'exists:nha_xuat_ban,id'],
             'ghi_chu' => ['nullable', 'string', 'max:500'],
@@ -100,6 +105,20 @@ class InventoryImportController extends Controller
 
             return $receipt;
         }, attempts: 3);
+
+        $actionLogger->log($request, 'inventory.import_receipt.created', 'phieu_nhap_kho', $receipt->id, [
+            'ma_phieu' => $receipt->ma_phieu,
+            'tong_tien' => $receipt->tong_tien,
+            'items' => collect($data['items'])->map(fn (array $item): array => [
+                'id_sach' => $item['id_sach'],
+                'so_luong' => $item['so_luong'],
+                'don_gia_nhap' => $item['don_gia_nhap'],
+            ])->values()->all(),
+        ]);
+
+        foreach (collect($data['items'])->pluck('id_sach')->unique() as $bookId) {
+            $stockNotifier->notifyIfAvailable((int) $bookId);
+        }
 
         return redirect()->route('admin.inventory.imports.index')
             ->with('success', "Tạo phiếu nhập kho {$receipt->ma_phieu} thành công!");

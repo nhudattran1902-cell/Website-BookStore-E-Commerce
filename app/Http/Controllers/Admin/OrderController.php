@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\DonHang;
+use App\Services\AdminActionLogger;
 use App\Services\OrderWorkflowService;
 use App\Services\VietQRService;
 use Illuminate\Contracts\View\View;
@@ -90,7 +91,7 @@ class OrderController extends Controller
 
         // 7. Sắp xếp theo tổng tiền hoặc ngày tạo mới nhất
         if (! empty($filters['sort_total'])) {
-            $query->orderBy('tong_tien', $filters['sort_total']);
+            $query->orderBy('thanh_tien', $filters['sort_total']);
         } else {
             $query->orderByDesc('ngay_tao');
         }
@@ -107,7 +108,7 @@ class OrderController extends Controller
      */
     public function show(int $id): View
     {
-        $order = DonHang::with(['nguoiDung', 'chiTietDonHang.sach', 'thanhToan', 'lichSuDonHang.nguoiThayDoi'])->findOrFail($id);
+        $order = DonHang::with(['nguoiDung', 'maGiamGia', 'chiTietDonHang.sach', 'thanhToan', 'lichSuDonHang.nguoiThayDoi'])->findOrFail($id);
 
         return view('admin.orders.show', compact('order'));
     }
@@ -115,8 +116,12 @@ class OrderController extends Controller
     /**
      * Cập nhật trạng thái đơn hàng theo quy tắc khống chế & Xử lý tồn kho (Reserve / Release)
      */
-    public function updateStatus(Request $request, int $id, OrderWorkflowService $workflow): RedirectResponse
-    {
+    public function updateStatus(
+        Request $request,
+        int $id,
+        OrderWorkflowService $workflow,
+        AdminActionLogger $actionLogger,
+    ): RedirectResponse {
         $request->validate([
             'trang_thai' => 'required|in:cho_xu_ly,dang_xu_ly,dang_giao,hoan_thanh,da_huy',
             'ghi_chu' => 'nullable|string|max:500',
@@ -127,9 +132,13 @@ class OrderController extends Controller
                 $id,
                 $request->trang_thai,
                 Auth::id(),
-                $request->ghi_chu ?? "Admin chuyển trạng thái đơn sang {$request->trang_thai}",
-                'admin',
+                $request->ghi_chu ?? "Nhân viên chuyển trạng thái đơn sang {$request->trang_thai}",
+                Auth::user()?->hasRole('admin') ? 'admin' : 'staff',
             );
+            $actionLogger->log($request, 'order.status.updated', 'don_hang', $id, [
+                'trang_thai_moi' => $request->trang_thai,
+                'ghi_chu' => $request->ghi_chu,
+            ]);
 
             return redirect()->back()->with('success', 'Cập nhật trạng thái đơn hàng thành công!');
         } catch (LogicException $exception) {
@@ -137,7 +146,7 @@ class OrderController extends Controller
         }
     }
 
-    public function updateShipping(Request $request, int $id): RedirectResponse
+    public function updateShipping(Request $request, int $id, AdminActionLogger $actionLogger): RedirectResponse
     {
         $data = $request->validate([
             'don_vi_van_chuyen' => ['required', 'in:GHN,GHTK'],
@@ -147,12 +156,17 @@ class OrderController extends Controller
 
         $order = DonHang::findOrFail($id);
         $order->update($data);
+        $actionLogger->log($request, 'order.shipping.updated', 'don_hang', $order->id, $data);
 
         return redirect()->back()->with('success', 'Thông tin vận chuyển đã được cập nhật.');
     }
 
-    public function confirmBankTransfer(Request $request, int $id, OrderWorkflowService $workflow): RedirectResponse
-    {
+    public function confirmBankTransfer(
+        Request $request,
+        int $id,
+        OrderWorkflowService $workflow,
+        AdminActionLogger $actionLogger,
+    ): RedirectResponse {
         $data = $request->validate([
             'so_tien' => ['required', 'integer', 'min:1'],
             'ma_giao_dich' => ['required', 'string', 'max:100'],
@@ -176,6 +190,13 @@ class OrderController extends Controller
 
         if (! in_array($result, ['paid', 'already_paid'], true)) {
             return redirect()->back()->with('error', 'Không thể xác nhận giao dịch chuyển khoản này.');
+        }
+
+        if ($result === 'paid') {
+            $actionLogger->log($request, 'payment.bank_transfer.confirmed', 'don_hang', $order->id, [
+                'so_tien' => (int) $data['so_tien'],
+                'ma_giao_dich' => $data['ma_giao_dich'],
+            ]);
         }
 
         return redirect()->back()->with('success', 'Đã đối soát và xác nhận chuyển khoản.');

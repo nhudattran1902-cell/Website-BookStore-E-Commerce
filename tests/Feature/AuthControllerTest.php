@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\NguoiDung;
 use App\Models\VaiTro;
+use App\Notifications\AdminPasswordResetOtpNotification;
+use App\Notifications\SuspiciousLoginAttemptNotification;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -67,7 +69,7 @@ class AuthControllerTest extends TestCase
         $user = NguoiDung::factory()->createOne();
 
         $this->post(route('password.email'), ['email' => $user->email])
-            ->assertSessionHas('status');
+            ->assertSessionHas('status', "Hướng dẫn đặt lại mật khẩu đã được gửi về Gmail: {$user->email}.");
 
         Notification::assertSentTo($user, ResetPassword::class);
         $notification = Notification::sent($user, ResetPassword::class)->first();
@@ -83,11 +85,39 @@ class AuthControllerTest extends TestCase
         $this->assertTrue(Hash::check('newstrongpass8', $user->fresh()->mat_khau));
     }
 
-    public function test_admin_login_is_temporarily_locked_after_five_invalid_passwords(): void
+    public function test_unknown_email_gets_an_explicit_not_found_message(): void
     {
+        Notification::fake();
+
+        $this->post(route('password.email'), ['email' => 'missing@example.com'])
+            ->assertSessionHasErrors([
+                'email' => 'Email missing@example.com không tồn tại trong hệ thống.',
+            ]);
+
+        Notification::assertNothingSent();
+    }
+
+    public function test_admin_is_told_when_reset_otp_was_sent_to_email(): void
+    {
+        Notification::fake();
         $admin = $this->createAdmin();
-        $loginKey = strtolower($admin->email).'|127.0.0.1';
-        RateLimiter::clear($loginKey);
+
+        $this->post(route('password.email'), ['email' => $admin->email])
+            ->assertSessionHas('status', "OTP đã được gửi về Gmail: {$admin->email}. Mã có hiệu lực trong 5 phút.");
+
+        $this->post(route('password.email'), ['email' => $admin->email])
+            ->assertSessionHas('status', "OTP đã được gửi về Gmail: {$admin->email}. Mã có hiệu lực trong 5 phút.");
+
+        Notification::assertSentTo($admin, AdminPasswordResetOtpNotification::class);
+    }
+
+    public function test_fifth_invalid_login_locks_account_for_thirty_seconds_and_warns_user(): void
+    {
+        Notification::fake();
+        $admin = $this->createAdmin();
+        [$attemptKey, $lockKey] = $this->loginKeys($admin);
+        RateLimiter::clear($attemptKey);
+        RateLimiter::clear($lockKey);
 
         for ($attempt = 0; $attempt < 5; $attempt++) {
             $this->post(route('login'), [
@@ -101,16 +131,137 @@ class AuthControllerTest extends TestCase
             'mat_khau' => 'wrong-password',
         ])->assertSessionHasErrors('email');
 
+        $this->assertSame(30, RateLimiter::availableIn($lockKey));
+        Notification::assertSentTo($admin, SuspiciousLoginAttemptNotification::class, function (SuspiciousLoginAttemptNotification $notification): bool {
+            return $notification->failedAttempts === 5
+                && $notification->lockoutSeconds === 30;
+        });
         $this->assertDatabaseHas('admin_login_logs', [
             'id_nguoi_dung' => $admin->id,
             'ket_qua' => 'password_failed',
         ]);
-        $this->assertDatabaseHas('admin_login_logs', [
-            'id_nguoi_dung' => $admin->id,
-            'ket_qua' => 'locked',
-        ]);
+        RateLimiter::clear($attemptKey);
+        RateLimiter::clear($lockKey);
+    }
 
-        RateLimiter::clear($loginKey);
+    public function test_login_lockout_duration_escalates_at_requested_attempt_milestones(): void
+    {
+        $this->freezeTime();
+        $user = NguoiDung::factory()->createOne();
+        [$attemptKey, $lockKey] = $this->loginKeys($user);
+
+        foreach ([
+            5 => 30,
+            6 => 60,
+            7 => 90,
+            8 => 120,
+            9 => 150,
+            10 => 300,
+            14 => 300,
+            15 => 900,
+        ] as $attempt => $expectedSeconds) {
+            RateLimiter::clear($lockKey);
+            while (RateLimiter::attempts($attemptKey) < $attempt - 1) {
+                RateLimiter::hit($attemptKey, 86400);
+            }
+
+            $this->post(route('login'), [
+                'email' => $user->email,
+                'mat_khau' => 'wrong-password',
+            ])->assertSessionHasErrors('email');
+
+            $this->assertSame($expectedSeconds, RateLimiter::availableIn($lockKey));
+            RateLimiter::clear($lockKey);
+        }
+
+        RateLimiter::clear($attemptKey);
+    }
+
+    public function test_login_sends_warning_at_attempts_ten_and_fifteen(): void
+    {
+        Notification::fake();
+        $user = NguoiDung::factory()->createOne();
+        [$attemptKey, $lockKey] = $this->loginKeys($user);
+
+        foreach ([5, 10, 15] as $attempt) {
+            RateLimiter::clear($lockKey);
+            while (RateLimiter::attempts($attemptKey) < $attempt - 1) {
+                RateLimiter::hit($attemptKey, 86400);
+            }
+
+            $this->post(route('login'), [
+                'email' => $user->email,
+                'mat_khau' => 'wrong-password',
+            ])->assertSessionHasErrors('email');
+            RateLimiter::clear($lockKey);
+        }
+
+        Notification::assertSentTo($user, SuspiciousLoginAttemptNotification::class, 3);
+        RateLimiter::clear($attemptKey);
+    }
+
+    public function test_successful_login_clears_failure_counter_and_lockout(): void
+    {
+        $user = NguoiDung::factory()->createOne();
+        [$attemptKey, $lockKey] = $this->loginKeys($user);
+        RateLimiter::hit($attemptKey, 86400);
+
+        $this->post(route('login'), [
+            'email' => $user->email,
+            'mat_khau' => 'password',
+        ])->assertRedirect('/');
+
+        $this->assertSame(0, RateLimiter::attempts($attemptKey));
+        $this->assertSame(0, RateLimiter::attempts($lockKey));
+    }
+
+    public function test_registration_route_limits_requests(): void
+    {
+        RateLimiter::clear('127.0.0.1');
+
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            $this->post(route('register'), [])->assertSessionHasErrors();
+        }
+
+        $this->post(route('register'), [])->assertTooManyRequests();
+    }
+
+    public function test_login_route_limits_requests(): void
+    {
+        RateLimiter::clear('127.0.0.1');
+        $user = NguoiDung::factory()->createOne();
+        [$attemptKey, $lockKey] = $this->loginKeys($user);
+        RateLimiter::clear($attemptKey);
+        RateLimiter::clear($lockKey);
+
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $this->post(route('login'), [
+                'email' => $user->email,
+                'mat_khau' => 'wrong-password',
+            ])->assertSessionHasErrors('email');
+            RateLimiter::clear($lockKey);
+        }
+
+        $this->post(route('login'), [
+            'email' => $user->email,
+            'mat_khau' => 'wrong-password',
+        ])->assertTooManyRequests();
+
+        RateLimiter::clear($attemptKey);
+        RateLimiter::clear($lockKey);
+    }
+
+    /**
+     * @return array{string, string}
+     */
+    private function loginKeys(NguoiDung $user): array
+    {
+        $loginKey = strtolower($user->email).'|127.0.0.1';
+
+        return [
+            'login-attempts:'.$loginKey,
+            'login-lock:'.$loginKey,
+        ];
     }
 
     public function test_successful_admin_password_login_is_audited_before_two_factor_challenge(): void

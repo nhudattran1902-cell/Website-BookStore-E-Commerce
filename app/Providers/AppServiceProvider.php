@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\ChiTietGioHang;
 use App\Models\NguoiDung;
+use App\Notifications\BookAvailableNotification;
 use App\Notifications\PaymentReceivedNotification;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Pagination\Paginator;
@@ -43,10 +44,18 @@ class AppServiceProvider extends ServiceProvider
                     ->limit(5)
                     ->get()
                 : collect();
+            $bookAvailabilityNotifications = $user instanceof NguoiDung && Schema::hasTable('notifications')
+                ? $user->notifications()
+                    ->where('type', BookAvailableNotification::class)
+                    ->latest()
+                    ->limit(5)
+                    ->get()
+                : collect();
 
             $view->with([
                 'cartCount' => $cartCount,
                 'paymentNotifications' => $paymentNotifications,
+                'bookAvailabilityNotifications' => $bookAvailabilityNotifications,
             ]);
         });
 

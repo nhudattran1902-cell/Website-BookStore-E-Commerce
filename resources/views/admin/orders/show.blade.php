@@ -123,9 +123,25 @@
                                 </tbody>
                                 <tfoot class="table-light">
                                     <tr>
-                                        <td colspan="3" class="text-end fw-bold">Tổng tiền thanh toán:</td>
-                                        <td class="text-end pe-3 fw-bold text-danger fs-5">
+                                        <td colspan="3" class="text-end">Tạm tính:</td>
+                                        <td class="text-end pe-3">
                                             {{ number_format($order->tong_tien ?? 0, 0, ',', '.') }} đ
+                                        </td>
+                                    </tr>
+                                    @if (($order->so_tien_giam_gia ?? 0) > 0)
+                                        <tr>
+                                            <td colspan="3" class="text-end text-success">
+                                                Giảm giá{{ $order->maGiamGia?->ma_code ? ' ('.$order->maGiamGia->ma_code.')' : '' }}:
+                                            </td>
+                                            <td class="text-end pe-3 text-success">
+                                                -{{ number_format($order->so_tien_giam_gia, 0, ',', '.') }} đ
+                                            </td>
+                                        </tr>
+                                    @endif
+                                    <tr>
+                                        <td colspan="3" class="text-end fw-bold">Khách cần thanh toán:</td>
+                                        <td class="text-end pe-3 fw-bold text-danger fs-5">
+                                            {{ number_format($order->thanh_tien ?? $order->thanhToan?->so_tien ?? $order->tong_tien ?? 0, 0, ',', '.') }} đ
                                         </td>
                                     </tr>
                                 </tfoot>
@@ -138,6 +154,7 @@
             <!-- Thông tin khách hàng & cập nhật trạng thái -->
             <div class="col-md-4 mb-4">
                 <!-- Cập nhật trạng thái -->
+                @if (auth()->user()->hasPermission('orders.status.update'))
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-primary text-white fw-bold">
                         <i class="bi bi-pencil-square me-2"></i> Cập nhật trạng thái đơn
@@ -164,11 +181,12 @@
                         </form>
                     </div>
                 </div>
+                @endif
 
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-dark text-white fw-bold">Thông tin vận chuyển</div>
                     <div class="card-body">
-                        @if (in_array($order->trang_thai, ['dang_xu_ly', 'dang_giao'], true))
+                        @if (auth()->user()->hasPermission('orders.shipping.update') && in_array($order->trang_thai, ['dang_xu_ly', 'dang_giao'], true))
                             <form action="{{ route('admin.orders.updateShipping', $order->id) }}" method="POST">
                                 @csrf
                                 @method('PUT')
@@ -200,7 +218,7 @@
                     </div>
                 </div>
 
-                <!-- Thông tin giao hàng & Thanh toán -->
+                <!-- Thông tin giao hàng -->
                 <div class="card border-0 shadow-sm">
                     <div class="card-header bg-dark text-white fw-bold">
                         <i class="bi bi-person-lines-fill me-2"></i> Thông tin giao hàng
@@ -212,53 +230,44 @@
                         </p>
                         <p class="mb-2"><strong>Địa chỉ nhận hàng:</strong>
                             {{ $order->dia_chi_nhan ?: ($order->dia_chi_giao_hang ?? 'Chưa cập nhật') }}</p>
-                        <hr>
-                        <p class="mb-2">
-                            <strong>Phương thức thanh toán:</strong>
-                            @php
-                                $pt = strtolower(
-                                    $order->thanhToan->phuong_thuc_thanh_toan ?? ($order->phuong_thuc_thanh_toan ?? 'cod'),
-                                );
-                            @endphp
-                            @if ($pt === 'momo')
-                                <span class="badge bg-danger">MoMo</span>
-                            @elseif($pt === 'vnpay')
-                                <span class="badge bg-primary">VNPay</span>
-                            @elseif($pt === 'banktransfer')
-                                <span class="badge bg-success">Chuyển khoản VietQR</span>
-                            @else
-                                <span class="badge bg-secondary">COD (Tiền mặt)</span>
-                            @endif
-                        </p>
-                        <p class="mb-0">
-                            <strong>Trạng thái thanh toán:</strong>
-                            @if (($order->thanhToan->trang_thai ?? '') === 'da_thanh_toan' || $order->trang_thai === 'hoan_thanh')
-                                <span class="badge bg-success">Đã thanh toán</span>
-                            @else
-                                <span class="badge bg-warning text-dark">Chờ thanh toán</span>
-                            @endif
-                        </p>
-                        @if (($order->thanhToan->phuong_thuc_thanh_toan ?? null) === 'BankTransfer'
-                            && ($order->thanhToan->trang_thai ?? null) === 'cho_thanh_toan')
-                            <form action="{{ route('admin.orders.payment.confirmBankTransfer', $order->id) }}" method="POST" class="border-top mt-3 pt-3">
-                                @csrf
-                                <div class="mb-2">
-                                    <label class="form-label small">Số tiền đã nhận</label>
-                                    <input name="so_tien" type="number" min="1" class="form-control form-control-sm" value="{{ $order->thanhToan->so_tien }}" required>
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label small">Mã giao dịch ngân hàng</label>
-                                    <input name="ma_giao_dich" class="form-control form-control-sm" maxlength="100" required>
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label small">Chữ ký SIG trong nội dung chuyển khoản</label>
-                                    <input name="signature" class="form-control form-control-sm font-monospace" pattern="[a-fA-F0-9]{64}" maxlength="64" required>
-                                </div>
-                                <button type="submit" class="btn btn-success btn-sm w-100">Đối soát và xác nhận</button>
-                            </form>
-                        @endif
                     </div>
                 </div>
+
+                @if (auth()->user()->hasPermission('payments.view') && $order->thanhToan)
+                    @php
+                        $paymentMethod = $order->thanhToan->phuong_thuc_thanh_toan;
+                        $paymentMethods = [
+                            'COD' => 'COD · Thu hộ khi giao hàng',
+                            'MoMo' => 'Ví MoMo',
+                            'VNPay' => 'VNPay',
+                            'BankTransfer' => 'Chuyển khoản VietQR',
+                        ];
+                        $paymentStatuses = [
+                            'da_thanh_toan' => ['Đã thanh toán', 'success'],
+                            'cho_thanh_toan' => ['Chờ thanh toán', 'warning text-dark'],
+                            'that_bai' => ['Thất bại', 'danger'],
+                            'da_huy' => ['Đã hủy', 'secondary'],
+                            'hoan_tien' => ['Đã hoàn tiền', 'info text-dark'],
+                        ];
+                        $paymentStatus = $paymentStatuses[$order->thanhToan->trang_thai]
+                            ?? [ucfirst(str_replace('_', ' ', $order->thanhToan->trang_thai)), 'secondary'];
+                    @endphp
+                    <div class="card border-0 shadow-sm mt-4">
+                        <div class="card-body d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+                            <div>
+                                <div class="fw-bold mb-2"><i class="bi bi-credit-card me-2"></i>Tóm tắt thanh toán</div>
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <span>{{ $paymentMethods[$paymentMethod] ?? $paymentMethod }}</span>
+                                    <span class="badge bg-{{ $paymentStatus[1] }}">{{ $paymentStatus[0] }}</span>
+                                    <span class="text-muted">{{ number_format($order->thanhToan->so_tien ?? 0, 0, ',', '.') }} đ</span>
+                                </div>
+                            </div>
+                            <a href="{{ route('admin.transactions.show', $order->thanhToan->id) }}" class="btn btn-outline-primary btn-sm">
+                                Xem giao dịch thanh toán <i class="bi bi-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
 

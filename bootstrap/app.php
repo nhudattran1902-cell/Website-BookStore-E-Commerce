@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Middleware\AdminMiddleware;
-use App\Http\Middleware\EnsureTwoFactorAuthenticated;
+use App\Http\Middleware\EnsureAccountIsActive;
+use App\Http\Middleware\EnsureAdminRole;
+use App\Http\Middleware\EnsurePermission;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -19,7 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Đăng ký middleware alias 'admin' để bảo vệ các route quản trị
         $middleware->alias([
             'admin' => AdminMiddleware::class,
-            'admin.2fa' => EnsureTwoFactorAuthenticated::class,
+            'admin.role' => EnsureAdminRole::class,
+            'permission' => EnsurePermission::class,
+            'account.active' => EnsureAccountIsActive::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

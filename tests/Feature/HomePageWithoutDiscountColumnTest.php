@@ -3,23 +3,18 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\HomeController;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class HomePageWithoutDiscountColumnTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_weekly_deals_query_ignores_discount_filter_when_column_is_missing(): void
     {
-        Schema::dropAllTables();
-
-        Schema::create('sach', function ($table) {
-            $table->id();
-            $table->string('tieu_de');
-            $table->string('duong_dan_tinh')->unique();
-            $table->decimal('gia_ban', 12, 0);
-            $table->boolean('dang_hoat_dong')->default(true);
-            $table->timestamp('ngay_tao')->useCurrent();
-            $table->timestamp('ngay_cap_nhat')->useCurrent()->useCurrentOnUpdate();
+        Schema::table('sach', function ($table) {
+            $table->dropColumn('gia_khuyen_mai');
         });
 
         \DB::table('sach')->insert([

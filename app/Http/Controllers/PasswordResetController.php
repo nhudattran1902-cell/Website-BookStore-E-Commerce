@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
 class PasswordResetController extends Controller
@@ -24,9 +25,31 @@ class PasswordResetController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        Password::sendResetLink($validated);
+        $email = Str::lower(trim($validated['email']));
+        $validated['email'] = $email;
+        $requestKey = 'password-reset-request:'.hash('sha256', $email.'|'.$request->ip());
+        if (RateLimiter::tooManyAttempts($requestKey, 3)) {
+            return back()->withErrors([
+                'email' => 'Bạn đã yêu cầu đặt lại mật khẩu quá nhiều lần. Vui lòng chờ 15 phút rồi thử lại.',
+            ])->withInput($request->only('email'));
+        }
 
-        return back()->with('status', 'Nếu email có tài khoản, hướng dẫn đặt lại mật khẩu sẽ được gửi.');
+        RateLimiter::hit($requestKey, 900);
+        $status = Password::sendResetLink($validated);
+
+        if ($status === Password::RESET_LINK_SENT) {
+            return back()->with('status', "Hướng dẫn đặt lại mật khẩu đã được gửi về Gmail: {$email}.");
+        }
+
+        if ($status === Password::RESET_THROTTLED) {
+            return back()->withErrors([
+                'email' => 'Bạn vừa yêu cầu đặt lại mật khẩu. Vui lòng chờ trước khi yêu cầu gửi lại.',
+            ])->withInput($request->only('email'));
+        }
+
+        return back()->withErrors([
+            'email' => 'Không thể gửi hướng dẫn đặt lại mật khẩu. Vui lòng thử lại sau.',
+        ])->withInput($request->only('email'));
     }
 
     public function edit(Request $request, string $token): View
@@ -45,6 +68,9 @@ class PasswordResetController extends Controller
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
+        $email = Str::lower(trim($validated['email']));
+        $validated['email'] = $email;
+
         $status = Password::reset($validated, function (NguoiDung $user, string $password): void {
             $user->forceFill([
                 'mat_khau' => Hash::make($password),
@@ -58,6 +84,6 @@ class PasswordResetController extends Controller
             return redirect()->route('login')->with('status', 'Đã đổi mật khẩu. Vui lòng đăng nhập lại.');
         }
 
-        return back()->withErrors(['email' => __($status)]);
+        return back()->withErrors(['email' => 'Yêu cầu đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.']);
     }
 }

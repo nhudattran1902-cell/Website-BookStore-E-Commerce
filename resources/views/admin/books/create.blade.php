@@ -62,6 +62,68 @@
                                 </div>
                             </div>
 
+                            <h5 class="fw-bold mt-4 mb-3">Thông số ấn bản</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="loai_bia" class="form-label fw-bold">Loại bìa</label>
+                                    <select id="loai_bia" name="loai_bia" class="form-select @error('loai_bia') is-invalid @enderror">
+                                        <option value="">-- Chọn loại bìa --</option>
+                                        <option value="bia_mem" @selected(old('loai_bia') === 'bia_mem')>Bìa mềm</option>
+                                        <option value="bia_cung" @selected(old('loai_bia') === 'bia_cung')>Bìa cứng</option>
+                                    </select>
+                                    @error('loai_bia')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="so_trang" class="form-label fw-bold">Số trang</label>
+                                    <input id="so_trang" type="number" name="so_trang" min="1" max="100000"
+                                        value="{{ old('so_trang') }}" class="form-control @error('so_trang') is-invalid @enderror">
+                                    @error('so_trang')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="ngon_ngu" class="form-label fw-bold">Ngôn ngữ</label>
+                                    <input id="ngon_ngu" type="text" name="ngon_ngu" maxlength="100"
+                                        value="{{ old('ngon_ngu') }}" class="form-control @error('ngon_ngu') is-invalid @enderror"
+                                        placeholder="Ví dụ: Tiếng Việt">
+                                    @error('ngon_ngu')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="lan_tai_ban" class="form-label fw-bold">Lần tái bản</label>
+                                    <input id="lan_tai_ban" type="number" name="lan_tai_ban" min="1" max="65535"
+                                        value="{{ old('lan_tai_ban') }}" class="form-control @error('lan_tai_ban') is-invalid @enderror">
+                                    @error('lan_tai_ban')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="khoi_luong_gram" class="form-label fw-bold">Khối lượng (gram)</label>
+                                    <input id="khoi_luong_gram" type="number" name="khoi_luong_gram" min="1" max="1000000"
+                                        value="{{ old('khoi_luong_gram') }}" class="form-control @error('khoi_luong_gram') is-invalid @enderror">
+                                    @error('khoi_luong_gram')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="nha_cung_cap" class="form-label fw-bold">Nhà cung cấp</label>
+                                    <input id="nha_cung_cap" type="text" name="nha_cung_cap" maxlength="255"
+                                        value="{{ old('nha_cung_cap') }}" class="form-control @error('nha_cung_cap') is-invalid @enderror">
+                                    @error('nha_cung_cap')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="chieu_rong_mm" class="form-label fw-bold">Rộng (mm)</label>
+                                    <input id="chieu_rong_mm" type="number" name="chieu_rong_mm" min="0.1" max="5000" step="0.1"
+                                        value="{{ old('chieu_rong_mm') }}" class="form-control @error('chieu_rong_mm') is-invalid @enderror">
+                                    @error('chieu_rong_mm')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="chieu_cao_mm" class="form-label fw-bold">Cao (mm)</label>
+                                    <input id="chieu_cao_mm" type="number" name="chieu_cao_mm" min="0.1" max="5000" step="0.1"
+                                        value="{{ old('chieu_cao_mm') }}" class="form-control @error('chieu_cao_mm') is-invalid @enderror">
+                                    @error('chieu_cao_mm')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="do_day_mm" class="form-label fw-bold">Độ dày (mm)</label>
+                                    <input id="do_day_mm" type="number" name="do_day_mm" min="0.1" max="1000" step="0.1"
+                                        value="{{ old('do_day_mm') }}" class="form-control @error('do_day_mm') is-invalid @enderror">
+                                    @error('do_day_mm')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                            </div>
+
                             <div class="mb-3">
                                 <label class="form-label fw-bold">Mô tả sách</label>
                                 <textarea name="mo_ta" class="form-control" rows="5" placeholder="Nhập tóm tắt nội dung cuốn sách...">{{ old('mo_ta') }}</textarea>

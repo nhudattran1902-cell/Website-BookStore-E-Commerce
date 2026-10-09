@@ -30,6 +30,15 @@
                         <a href="{{ route('customer.orders.index') }}" class="list-group-item list-group-item-action">
                             <i class="bi bi-box-seam me-2"></i> Lịch sử đơn hàng
                         </a>
+                        <a href="{{ route('customer.wishlist.index') }}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-heart me-2"></i> Sách yêu thích
+                        </a>
+                        <a href="{{ route('customer.stock-alerts.index') }}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-bell me-2"></i> Sách đang theo dõi
+                        </a>
+                        <a href="{{ route('customer.profile') }}#login-history" class="list-group-item list-group-item-action">
+                            <i class="bi bi-shield-check me-2"></i> Lịch sử đăng nhập
+                        </a>
                         <form action="{{ route('logout') }}" method="POST" class="d-inline">
                             @csrf
                             <button type="submit" class="list-group-item list-group-item-action text-danger">
@@ -105,7 +114,8 @@
                                 <div class="col-md-6">
                                     <label class="form-label">Mật khẩu mới</label>
                                     <input type="password" name="new_password"
-                                        class="form-control @error('new_password') is-invalid @enderror" required>
+                                        class="form-control @error('new_password') is-invalid @enderror" minlength="8" required>
+                                    <div class="form-text">Mật khẩu mới cần có ít nhất 8 ký tự.</div>
                                     @error('new_password')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -118,6 +128,53 @@
                             <button type="submit" class="btn btn-outline-dark px-4">Đổi mật khẩu</button>
                         </form>
                     </div>
+                </div>
+
+                <div class="card border-0 shadow-sm mt-4" id="login-history">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="fw-bold mb-0">Lịch sử đăng nhập</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4">Thời gian</th>
+                                        <th>Kết quả</th>
+                                        <th>Địa chỉ IP</th>
+                                        <th class="pe-4">Thiết bị / trình duyệt</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse ($loginLogs as $loginLog)
+                                        <tr>
+                                            <td class="ps-4">{{ \Illuminate\Support\Carbon::parse($loginLog->attempted_at)->format('d/m/Y H:i:s') }}</td>
+                                            <td>
+                                                @if ($loginLog->ket_qua === 'password_accepted')
+                                                    <span class="badge bg-success">Đăng nhập thành công</span>
+                                                @elseif ($loginLog->ket_qua === 'locked')
+                                                    <span class="badge bg-warning text-dark">Đang bị khóa</span>
+                                                @else
+                                                    <span class="badge bg-danger">Sai mật khẩu</span>
+                                                @endif
+                                            </td>
+                                            <td>{{ $loginLog->ip_address ?: 'Không xác định' }}</td>
+                                            <td class="pe-4 text-break">{{ $loginLog->user_agent ?: 'Không xác định' }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-4">Chưa có lịch sử đăng nhập.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    @if ($loginLogs->hasPages())
+                        <div class="card-footer bg-white">
+                            {{ $loginLogs->links() }}
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>

@@ -7,8 +7,11 @@ use App\Models\NguoiDung;
 use App\Models\NhaXuatBan;
 use App\Models\PhieuNhapKho;
 use App\Models\Sach;
+use App\Models\TheoDoiHang;
 use App\Models\VaiTro;
+use App\Notifications\BookAvailableNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class InventoryImportTest extends TestCase
@@ -56,6 +59,36 @@ class InventoryImportTest extends TestCase
         $this->assertSame(8, $this->stockFor($book)->so_luong_ton);
         $this->assertSame(1, $this->stockFor($book)->so_luong_dat_truoc);
         $this->assertSame(13750.0, (float) $book->fresh()->gia_von);
+    }
+
+    public function test_importing_stock_notifies_customers_tracking_the_book(): void
+    {
+        Notification::fake();
+
+        $admin = $this->createAdmin();
+        $customer = NguoiDung::factory()->createOne();
+        $book = Sach::create([
+            'tieu_de' => 'Sach sap nhap kho',
+            'duong_dan_tinh' => 'sach-sap-nhap-kho',
+            'gia_ban' => 50000,
+            'gia_von' => 10000,
+            'dang_hoat_dong' => true,
+        ]);
+        $book->khoHang()->create(['so_luong_ton' => 0, 'so_luong_dat_truoc' => 0]);
+        TheoDoiHang::create(['id_nguoi_dung' => $customer->id, 'id_sach' => $book->id]);
+        $publisher = NhaXuatBan::create(['ten_nxb' => 'Nha xuat ban test']);
+
+        $this->authenticateAdmin($admin);
+
+        $this->post(route('admin.inventory.imports.store'), [
+            'id_nha_xuat_ban' => $publisher->id,
+            'items' => [
+                ['id_sach' => $book->id, 'so_luong' => 3, 'don_gia_nhap' => 20000],
+            ],
+        ])->assertRedirect(route('admin.inventory.imports.index'));
+
+        Notification::assertSentTo($customer, BookAvailableNotification::class);
+        $this->assertNotNull(TheoDoiHang::firstOrFail()->da_thong_bao_at);
     }
 
     private function createAdmin(): NguoiDung

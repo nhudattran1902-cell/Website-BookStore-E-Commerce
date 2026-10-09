@@ -79,6 +79,7 @@
                                     <td class="text-end pe-3">
                                         <div class="d-flex justify-content-end gap-2">
                                             {{-- Nút duyệt / ẩn --}}
+                                            @if (auth()->user()->hasPermission('reviews.moderate'))
                                             <form action="{{ route('admin.reviews.toggle', $review->id) }}" method="POST">
                                                 @csrf
                                                 @method('PATCH')
@@ -89,8 +90,10 @@
                                                         class="bi {{ $review->da_duyet ? 'bi-eye-slash' : 'bi-check-lg' }}"></i>
                                                 </button>
                                             </form>
+                                            @endif
 
                                             {{-- Nút xóa --}}
+                                            @if (auth()->user()->hasPermission('reviews.delete'))
                                             <form action="{{ route('admin.reviews.destroy', $review->id) }}" method="POST"
                                                 onsubmit="return confirm('Bạn có chắc muốn xóa đánh giá này?');">
                                                 @csrf
@@ -100,6 +103,10 @@
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </form>
+                                            @endif
+                                            @unless (auth()->user()->hasPermission('reviews.moderate') || auth()->user()->hasPermission('reviews.delete'))
+                                                <span class="text-muted small">Chỉ xem</span>
+                                            @endunless
                                         </div>
                                     </td>
                                 </tr>

@@ -25,6 +25,15 @@
                                     <a href="{{ route('books.show', $book->id) }}"
                                         class="text-decoration-none text-dark">{{ $book->tieu_de }}</a>
                                 </h6>
+                                <small class="text-muted d-block mb-1">
+                                    {{ $book->tacGia->pluck('ten_tac_gia')->implode(', ') ?: 'Đang cập nhật tác giả' }}
+                                </small>
+                                @if ($book->nhaXuatBan)
+                                    <small class="text-muted d-block mb-1">{{ $book->nhaXuatBan->ten_nxb }}</small>
+                                @endif
+                                @if ($book->ma_isbn)
+                                    <small class="text-muted d-block mb-2">ISBN: {{ $book->ma_isbn }}</small>
+                                @endif
                                 <div class="fw-bold text-danger">{{ number_format($book->gia_ban, 0, ',', '.') }} đ</div>
                             </div>
                         </div>

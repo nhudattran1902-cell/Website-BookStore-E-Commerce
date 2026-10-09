@@ -8,7 +8,7 @@
             <div class="col-md-6">
                 <div class="card border-0 shadow-sm p-4">
                     <h3 class="fw-bold text-center mb-3">Quên mật khẩu</h3>
-                    <p class="text-muted">Nhập email tài khoản để nhận hướng dẫn đặt lại mật khẩu.</p>
+                    <p class="text-muted">Nhập email tài khoản đặt lại mật khẩu.</p>
 
                     @if (session('status'))
                         <div class="alert alert-info">{{ session('status') }}</div>
@@ -25,7 +25,7 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
-                        <button type="submit" class="btn btn-dark w-100">Gửi hướng dẫn</button>
+                        <button type="submit" class="btn btn-dark w-100">Gửi yêu cầu đặt lại mật khẩu</button>
                     </form>
                 </div>
             </div>

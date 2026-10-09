@@ -4,6 +4,12 @@
 
 @section('content')
     <div class="container py-5">
+        @if (session('success'))
+            <div class="alert alert-success">{{ session('success') }}</div>
+        @endif
+        @if (session('info'))
+            <div class="alert alert-info">{{ session('info') }}</div>
+        @endif
         <div class="row">
             <!-- Ảnh bìa sách -->
             <div class="col-md-4 mb-4">
@@ -64,6 +70,50 @@
                         </button>
                     @endif
 
+                    @auth
+                        @if (Auth::user()->sachYeuThich()->whereKey($book->id)->exists())
+                            <form action="{{ route('customer.wishlist.destroy', $book) }}" method="POST">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-outline-danger rounded-0">
+                                    <i class="bi bi-heart-fill me-1"></i> Đã yêu thích
+                                </button>
+                            </form>
+                        @else
+                            <form action="{{ route('customer.wishlist.store', $book) }}" method="POST">
+                                @csrf
+                                <button type="submit" class="btn btn-outline-danger rounded-0">
+                                    <i class="bi bi-heart me-1"></i> Yêu thích
+                                </button>
+                            </form>
+                        @endif
+                    @else
+                        <a href="{{ route('login') }}" class="btn btn-outline-danger rounded-0">
+                            <i class="bi bi-heart me-1"></i> Đăng nhập để yêu thích
+                        </a>
+                    @endauth
+
+                    @if (($book->khoHang?->so_luong_kha_dung ?? 0) < 1)
+                        @auth
+                            @if ($isFollowingStock)
+                                <a href="{{ route('customer.stock-alerts.index') }}" class="btn btn-outline-primary rounded-0">
+                                    <i class="bi bi-bell-fill me-1"></i> Đang theo dõi khi có hàng
+                                </a>
+                            @else
+                                <form action="{{ route('customer.stock-alerts.store', $book) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="btn btn-outline-primary rounded-0">
+                                        <i class="bi bi-bell me-1"></i> Báo tôi khi có hàng
+                                    </button>
+                                </form>
+                            @endif
+                        @else
+                            <a href="{{ route('login') }}" class="btn btn-outline-primary rounded-0">
+                                <i class="bi bi-bell me-1"></i> Đăng nhập để theo dõi
+                            </a>
+                        @endauth
+                    @endif
+
                     <!-- Nút Đọc ngay (Luôn hiển thị) -->
                     @if (isset($previewPages) && $previewPages->count() > 0)
                         {{-- Nếu đã có trang đọc thử: Bật Modal --}}
@@ -97,6 +147,41 @@
                     @if (!empty($authors) && $authors->count() > 0)
                         <p class="text-muted small mb-1"><strong>Tác giả:</strong>
                             {{ $authors->pluck('ten_tac_gia')->implode(', ') }}</p>
+                    @endif
+                    @if ($book->loai_bia || $book->so_trang || $book->ngon_ngu || $book->lan_tai_ban || $book->khoi_luong_gram || $book->chieu_rong_mm || $book->chieu_cao_mm || $book->do_day_mm || $book->nha_cung_cap)
+                        <div class="card border-0 bg-light mt-3">
+                            <div class="card-body py-3">
+                                <h6 class="fw-bold mb-2">Thông số sách</h6>
+                                <div class="row g-2 small">
+                                    @if ($book->loai_bia)
+                                        <div class="col-sm-6"><strong>Bìa:</strong> {{ $book->loai_bia === 'bia_cung' ? 'Bìa cứng' : 'Bìa mềm' }}</div>
+                                    @endif
+                                    @if ($book->so_trang)
+                                        <div class="col-sm-6"><strong>Số trang:</strong> {{ number_format($book->so_trang) }}</div>
+                                    @endif
+                                    @if ($book->ngon_ngu)
+                                        <div class="col-sm-6"><strong>Ngôn ngữ:</strong> {{ $book->ngon_ngu }}</div>
+                                    @endif
+                                    @if ($book->lan_tai_ban)
+                                        <div class="col-sm-6"><strong>Tái bản:</strong> Lần {{ $book->lan_tai_ban }}</div>
+                                    @endif
+                                    @if ($book->khoi_luong_gram)
+                                        <div class="col-sm-6"><strong>Khối lượng:</strong> {{ number_format($book->khoi_luong_gram) }} g</div>
+                                    @endif
+                                    @if ($book->chieu_rong_mm || $book->chieu_cao_mm || $book->do_day_mm)
+                                        <div class="col-sm-6">
+                                            <strong>Kích thước:</strong>
+                                            {{ $book->chieu_rong_mm ? number_format((float) $book->chieu_rong_mm, 1) : '—' }} ×
+                                            {{ $book->chieu_cao_mm ? number_format((float) $book->chieu_cao_mm, 1) : '—' }} ×
+                                            {{ $book->do_day_mm ? number_format((float) $book->do_day_mm, 1) : '—' }} mm
+                                        </div>
+                                    @endif
+                                    @if ($book->nha_cung_cap)
+                                        <div class="col-12"><strong>Nhà cung cấp:</strong> {{ $book->nha_cung_cap }}</div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
                     @endif
                 </div>
             </div>

@@ -7,6 +7,7 @@ use App\Models\KhoHang;
 use App\Models\NhaXuatBan;
 use App\Models\Sach;
 use App\Models\TheLoai;
+use App\Services\StockAvailabilityNotifier;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -100,7 +101,7 @@ class AdminBookController extends Controller
     }
 
     // Xử lý lưu sách mới vào CSDL nha_sach_db
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, StockAvailabilityNotifier $stockNotifier): RedirectResponse
     {
         $request->validate([
             'tieu_de' => 'required|max:255',
@@ -108,6 +109,15 @@ class AdminBookController extends Controller
             'gia_ban' => 'required|numeric',
             'gia_khuyen_mai' => 'nullable|numeric|gt:0|lt:gia_ban|max:999999999999',
             'so_luong_ton' => 'nullable|integer|min:0',
+            'so_trang' => ['nullable', 'integer', 'min:1', 'max:100000'],
+            'loai_bia' => ['nullable', Rule::in(['bia_mem', 'bia_cung'])],
+            'khoi_luong_gram' => ['nullable', 'integer', 'min:1', 'max:1000000'],
+            'chieu_rong_mm' => ['nullable', 'numeric', 'gt:0', 'max:5000'],
+            'chieu_cao_mm' => ['nullable', 'numeric', 'gt:0', 'max:5000'],
+            'do_day_mm' => ['nullable', 'numeric', 'gt:0', 'max:1000'],
+            'ngon_ngu' => ['nullable', 'string', 'max:100'],
+            'lan_tai_ban' => ['nullable', 'integer', 'min:1', 'max:65535'],
+            'nha_cung_cap' => ['nullable', 'string', 'max:255'],
             'anh_bia' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048|dimensions:max_width=2000,max_height=3000',
         ], [
             'anh_bia.dimensions' => 'Kích thước ảnh tối đa là 2000 x 3000 pixel.',
@@ -138,6 +148,8 @@ class AdminBookController extends Controller
             'so_luong_dat_truoc' => 0,
         ]);
 
+        $stockNotifier->notifyIfAvailable((int) $book->id);
+
         return redirect()->route('admin.books.index')->with('success', 'Thêm sách mới thành công!');
     }
 
@@ -152,7 +164,7 @@ class AdminBookController extends Controller
     }
 
     // Cập nhật thông tin sách
-    public function update(Request $request, int $id): RedirectResponse
+    public function update(Request $request, int $id, StockAvailabilityNotifier $stockNotifier): RedirectResponse
     {
         $request->validate([
             'tieu_de' => 'required|max:255',
@@ -160,6 +172,15 @@ class AdminBookController extends Controller
             'gia_ban' => 'required|numeric',
             'gia_khuyen_mai' => 'nullable|numeric|gt:0|lt:gia_ban|max:999999999999',
             'so_luong_ton' => 'nullable|integer|min:0',
+            'so_trang' => ['nullable', 'integer', 'min:1', 'max:100000'],
+            'loai_bia' => ['nullable', Rule::in(['bia_mem', 'bia_cung'])],
+            'khoi_luong_gram' => ['nullable', 'integer', 'min:1', 'max:1000000'],
+            'chieu_rong_mm' => ['nullable', 'numeric', 'gt:0', 'max:5000'],
+            'chieu_cao_mm' => ['nullable', 'numeric', 'gt:0', 'max:5000'],
+            'do_day_mm' => ['nullable', 'numeric', 'gt:0', 'max:1000'],
+            'ngon_ngu' => ['nullable', 'string', 'max:100'],
+            'lan_tai_ban' => ['nullable', 'integer', 'min:1', 'max:65535'],
+            'nha_cung_cap' => ['nullable', 'string', 'max:255'],
             'anh_bia' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048|dimensions:max_width=2000,max_height=3000',
         ], [
             'anh_bia.dimensions' => 'Kích thước ảnh tối đa là 2000 x 3000 pixel.',
@@ -249,6 +270,10 @@ class AdminBookController extends Controller
             && Storage::disk('public')->exists($oldCoverPath)
         ) {
             Storage::disk('public')->delete($oldCoverPath);
+        }
+
+        if ($request->has('so_luong_ton')) {
+            $stockNotifier->notifyIfAvailable((int) $book->id);
         }
 
         return redirect()

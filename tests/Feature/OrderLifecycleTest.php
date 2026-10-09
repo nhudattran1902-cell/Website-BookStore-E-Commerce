@@ -28,7 +28,9 @@ class OrderLifecycleTest extends TestCase
         $response = $this->actingAs($customer)->post(route('checkout.process'), [
             'ten_nguoi_nhan' => 'Nguyen Van A',
             'sdt_nguoi_nhan' => '0900000000',
-            'dia_chi_giao_hang' => '1 Duong Test, Quan 1',
+            'so_nha_duong' => '1 Duong Test',
+            'province_code' => '01',
+            'ward_code' => '00004',
             'phuong_thuc_thanh_toan' => 'COD',
         ]);
 
@@ -36,7 +38,7 @@ class OrderLifecycleTest extends TestCase
         $response->assertRedirect(route('checkout.success', $order->ma_don_hang));
         $this->assertSame('Nguyen Van A', $order->ten_nguoi_nhan);
         $this->assertSame('0900000000', $order->sdt_nguoi_nhan);
-        $this->assertSame('1 Duong Test, Quan 1', $order->dia_chi_nhan);
+        $this->assertSame('1 Duong Test, Ba Đình, Hà Nội', $order->dia_chi_nhan);
         $this->assertTrue($order->da_giu_ton);
         $this->assertSame(5, $this->stockFor($book)->so_luong_ton);
         $this->assertSame(2, $this->stockFor($book)->so_luong_dat_truoc);
@@ -61,7 +63,9 @@ class OrderLifecycleTest extends TestCase
             ->post(route('checkout.process'), [
                 'ten_nguoi_nhan' => 'Nguyen Van B',
                 'sdt_nguoi_nhan' => '0900000001',
-                'dia_chi_giao_hang' => '2 Duong Test',
+                'so_nha_duong' => '2 Duong Test',
+                'province_code' => '01',
+                'ward_code' => '00004',
                 'phuong_thuc_thanh_toan' => 'COD',
             ])
             ->assertRedirect(route('checkout.index'))

@@ -7,6 +7,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
@@ -15,8 +16,13 @@ class ProfileController extends Controller
     public function index(): View
     {
         $user = Auth::user();
+        $loginLogs = DB::table('user_login_logs')
+            ->where('id_nguoi_dung', $user->id)
+            ->orderByDesc('attempted_at')
+            ->orderByDesc('id')
+            ->paginate(10);
 
-        return view('customer.profile', compact('user'));
+        return view('customer.profile', compact('user', 'loginLogs'));
     }
 
     public function update(Request $request): RedirectResponse
@@ -63,7 +69,7 @@ class ProfileController extends Controller
     {
         $request->validate([
             'current_password' => 'required',
-            'new_password' => 'required|string|min:6|confirmed',
+            'new_password' => 'required|string|min:8|confirmed',
         ]);
 
         $user = Auth::user();

@@ -9,9 +9,11 @@
 				<h3 class="fw-bold mb-1">Phiếu nhập kho</h3>
 				<p class="text-muted mb-0">Theo dõi lô hàng, nhà cung cấp và giá vốn nhập.</p>
 			</div>
-			<a href="{{ route('admin.inventory.imports.create') }}" class="btn btn-primary">
-				<i class="bi bi-plus-lg me-1"></i>Tạo phiếu nhập
-			</a>
+			@if (auth()->user()->hasPermission('inventory.import'))
+				<a href="{{ route('admin.inventory.imports.create') }}" class="btn btn-primary">
+					<i class="bi bi-plus-lg me-1"></i>Tạo phiếu nhập
+				</a>
+			@endif
 		</div>
 
 		@if (session('success'))

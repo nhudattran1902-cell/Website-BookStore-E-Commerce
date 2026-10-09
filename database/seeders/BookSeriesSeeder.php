@@ -125,7 +125,7 @@ class BookSeriesSeeder extends Seeder
                 'cat_slug' => 'ky-nang-song-tu-duy',
                 'series' => [
                     [
-                        'prefix' => 'Hạt Giống Cho Tâm Hồn - Tập',
+                        'prefix' => 'Hạt Giống Cho Tâm Hồn',
                         'count' => 3,
                         'price' => 75000,
                         'img' => 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=500',
@@ -161,7 +161,7 @@ class BookSeriesSeeder extends Seeder
                 'cat_slug' => 'kinh-te-quan-tri',
                 'series' => [
                     [
-                        'prefix' => 'Dạy Con Làm Giàu - Tập',
+                        'prefix' => 'Dạy Con Làm Giàu',
                         'count' => 3,
                         'price' => 110000,
                         'img' => 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=500',
@@ -177,7 +177,7 @@ class BookSeriesSeeder extends Seeder
                 'cat_slug' => 'tuoi-moi-lon',
                 'series' => [
                     [
-                        'prefix' => 'Kính Vạn Hoa - Tập',
+                        'prefix' => 'Kính Vạn Hoa',
                         'count' => 3,
                         'price' => 45000,
                         'img' => 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=500',

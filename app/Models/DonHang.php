@@ -47,7 +47,12 @@ class DonHang extends Model
     // Quan hệ: Đơn hàng thuộc 1 Người dùng
     public function nguoiDung(): BelongsTo
     {
-        return $this->belongsTo(NguoiDung::class, 'id_nguoi_dung');
+        return $this->belongsTo(NguoiDung::class, 'id_nguoi_dung')->withTrashed();
+    }
+
+    public function maGiamGia(): BelongsTo
+    {
+        return $this->belongsTo(MaGiamGia::class, 'id_ma_giam_gia');
     }
 
     // Quan hệ: Đơn hàng có nhiều Chi tiết đơn hàng

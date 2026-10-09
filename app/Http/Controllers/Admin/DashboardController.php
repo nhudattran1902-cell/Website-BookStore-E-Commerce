@@ -7,7 +7,9 @@ use App\Models\DonHang;
 use App\Models\KhoHang;
 use App\Models\NguoiDung;
 use App\Models\Sach;
+use App\Models\ThanhToan;
 use App\Models\TinNhanChat;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
@@ -17,8 +19,28 @@ class DashboardController extends Controller
      */
     public function index()
     {
-        // 1. Tính tổng doanh thu từ các đơn hàng có trạng thái 'hoan_thanh'
-        $tongDoanhThu = DonHang::where('trang_thai', 'hoan_thanh')->sum('thanh_tien');
+        // Doanh thu phản ánh số tiền đã thanh toán, không suy ra từ trạng thái giao hàng.
+        $tongDoanhThu = ThanhToan::where('trang_thai', 'da_thanh_toan')->sum('so_tien');
+
+        $currentYear = (int) now()->format('Y');
+        $monthExpression = match (DB::connection()->getDriverName()) {
+            'sqlite' => "CAST(strftime('%m', ngay_thanh_toan) AS INTEGER)",
+            'pgsql' => 'EXTRACT(MONTH FROM ngay_thanh_toan)',
+            default => 'MONTH(ngay_thanh_toan)',
+        };
+        $revenueByMonth = ThanhToan::query()
+            ->where('trang_thai', 'da_thanh_toan')
+            ->whereNotNull('ngay_thanh_toan')
+            ->whereBetween('ngay_thanh_toan', [now()->startOfYear(), now()])
+            ->selectRaw("{$monthExpression} as month_key, SUM(so_tien) as revenue")
+            ->groupByRaw($monthExpression)
+            ->get()
+            ->keyBy(fn ($row): int => (int) $row->month_key);
+        $revenueChartLabels = array_map(fn (int $month): string => 'T'.$month, range(1, 12));
+        $revenueChartValues = array_map(
+            fn (int $month): int => (int) ($revenueByMonth->get($month)?->revenue ?? 0),
+            range(1, 12),
+        );
 
         // 2. Đếm số đơn hàng mới cần xử lý (trạng thái 'cho_xu_ly')
         $donHangMoi = DonHang::where('trang_thai', 'cho_xu_ly')->count();
@@ -57,6 +79,8 @@ class DashboardController extends Controller
         // Truyền tất cả dữ liệu sang view admin.dashboard
         return view('admin.dashboard', compact(
             'tongDoanhThu',
+            'revenueChartLabels',
+            'revenueChartValues',
             'donHangMoi',
             'tongSachTonKho',
             'donHangGanDay',

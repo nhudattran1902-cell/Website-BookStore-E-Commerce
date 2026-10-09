@@ -4,8 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Sach;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class BookController extends Controller
 {
@@ -103,6 +109,12 @@ class BookController extends Controller
             ->where('dang_hoat_dong', true)
             ->findOrFail($id);
 
+        $isFollowingStock = Auth::check()
+            && Auth::user()->theoDoiHang()
+                ->where('id_sach', $book->id)
+                ->whereNull('da_thong_bao_at')
+                ->exists();
+
         // 2. XỬ LÝ SESSION SÁCH ĐÃ XEM (RECENTLY VIEWED)
         $recentlyViewedIds = session()->get('recently_viewed_books', []);
 
@@ -173,28 +185,100 @@ class BookController extends Controller
             'avgRating',
             'totalReviews',
             'relatedBooks',
-            'recentlyViewedBooks'
+            'recentlyViewedBooks',
+            'isFollowingStock',
         ));
     }
 
-    /**
-     * Tìm kiếm sách theo tiêu đề hoặc tên thể loại
-     */
-    public function search(Request $request): View
+    /** Show books matching the search phrase across searchable catalog fields. */
+    public function search(Request $request): View|RedirectResponse
     {
-        $keyword = $request->input('q') ?? $request->input('keyword');
+        $keyword = trim((string) ($request->input('q') ?? $request->input('keyword', '')));
 
-        $books = Sach::with(['theLoai', 'tacGia'])
-            ->where('dang_hoat_dong', true)
-            ->where(function ($query) use ($keyword) {
-                $query->where('tieu_de', 'LIKE', "%{$keyword}%")
-                    ->orWhereHas('theLoai', function ($q) use ($keyword) {
-                        $q->where('ten_the_loai', 'LIKE', "%{$keyword}%");
-                    });
-            })
+        if ($keyword === '') {
+            return redirect()->route('books.index');
+        }
+
+        $books = $this->matchingBooks($keyword)
+            ->with(['theLoai', 'tacGia', 'nhaXuatBan'])
+            ->orderByRaw('CASE WHEN sach.tieu_de = ? THEN 0 WHEN sach.tieu_de LIKE ? THEN 1 ELSE 2 END', [
+                $keyword,
+                $keyword.'%',
+            ])
+            ->orderBy('sach.tieu_de')
             ->paginate(12)
             ->withQueryString();
 
         return view('books.search', compact('books', 'keyword'));
+    }
+
+    /** Return a small list of suggestions for the storefront search box. */
+    public function suggestions(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'keyword' => ['nullable', 'string', 'max:100'],
+        ]);
+        $keyword = trim((string) ($validated['keyword'] ?? ''));
+
+        if (Str::length($keyword) < 2) {
+            return response()->json([]);
+        }
+
+        $suggestions = $this->matchingBooks($keyword)
+            ->with(['tacGia:id,ten_tac_gia', 'nhaXuatBan:id,ten_nxb'])
+            ->orderByRaw('CASE WHEN sach.tieu_de LIKE ? THEN 0 ELSE 1 END', [$keyword.'%'])
+            ->orderBy('sach.tieu_de')
+            ->limit(8)
+            ->get(['sach.id', 'sach.id_nha_xuat_ban', 'sach.tieu_de', 'sach.ma_isbn', 'sach.anh_bia'])
+            ->map(fn (Sach $book): array => [
+                'id' => $book->id,
+                'title' => $book->tieu_de,
+                'authors' => $book->tacGia->pluck('ten_tac_gia')->implode(', '),
+                'publisher' => $book->nhaXuatBan?->ten_nxb,
+                'isbn' => $book->ma_isbn,
+                'cover' => $book->anh_bia_url,
+                'url' => route('books.show', $book->id),
+            ])
+            ->values();
+
+        return response()->json($suggestions);
+    }
+
+    private function matchingBooks(string $keyword): Builder
+    {
+        $pattern = '%'.$keyword.'%';
+        $supportsFullText = DB::connection()->getDriverName() === 'mysql';
+
+        return Sach::query()
+            ->where('sach.dang_hoat_dong', true)
+            ->where(function (Builder $query) use ($keyword, $pattern, $supportsFullText): void {
+                $query->where(function (Builder $bookQuery) use ($keyword, $pattern, $supportsFullText): void {
+                    if ($supportsFullText) {
+                        $bookQuery->whereFullText(['tieu_de', 'mo_ta'], $keyword)
+                            ->orWhere('sach.tieu_de', 'like', $pattern);
+                    } else {
+                        $bookQuery->where('sach.tieu_de', 'like', $pattern)
+                            ->orWhere('sach.mo_ta', 'like', $pattern);
+                    }
+                })
+                    ->orWhere('sach.ma_isbn', 'like', $pattern)
+                    ->orWhereHas('tacGia', function (Builder $authorQuery) use ($keyword, $pattern, $supportsFullText): void {
+                        if ($supportsFullText) {
+                            $authorQuery->whereFullText('ten_tac_gia', $keyword)
+                                ->orWhere('ten_tac_gia', 'like', $pattern);
+                        } else {
+                            $authorQuery->where('ten_tac_gia', 'like', $pattern);
+                        }
+                    })
+                    ->orWhereHas('nhaXuatBan', function (Builder $publisherQuery) use ($keyword, $pattern, $supportsFullText): void {
+                        if ($supportsFullText) {
+                            $publisherQuery->whereFullText('ten_nxb', $keyword)
+                                ->orWhere('ten_nxb', 'like', $pattern);
+                        } else {
+                            $publisherQuery->where('ten_nxb', 'like', $pattern);
+                        }
+                    })
+                    ->orWhereHas('theLoai', fn (Builder $categoryQuery) => $categoryQuery->where('ten_the_loai', 'like', $pattern));
+            });
     }
 }

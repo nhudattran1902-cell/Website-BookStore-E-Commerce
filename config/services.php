@@ -36,9 +36,9 @@ return [
     ],
 
     'bookshop_ai' => [
-        'api_key' => env('GEMINI_API_KEY'),
-        'base_url' => env('GEMINI_API_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
-        'model' => env('GEMINI_MODEL', 'gemini-3.6-flash'),
+        'api_key' => env('GROQ_API_KEY'),
+        'base_url' => env('GROQ_API_BASE_URL', 'https://api.groq.com/openai/v1'),
+        'model' => env('GROQ_MODEL', 'openai/gpt-oss-20b'),
     ],
 
     'payments' => [

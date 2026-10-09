@@ -24,7 +24,7 @@
             </a>
 
             <!-- Yêu thích -->
-            <a href="{{ route('books.index') }}" class="top-bar-item text-decoration-none text-dark small">
+            <a href="{{ Auth::check() ? route('customer.wishlist.index') : route('login') }}" class="top-bar-item text-decoration-none text-dark small">
                 <i class="bi bi-heart me-1"></i>
                 <span class="d-none d-sm-inline">Yêu thích</span>
             </a>
@@ -108,19 +108,175 @@
             </ul>
 
             <!-- Thanh tìm kiếm tích hợp (Search Bar) -->
-            <form action="{{ route('books.search') }}" method="GET" class="d-flex flex-grow-1 mx-lg-4 my-2 my-lg-0"
-                style="max-width: 500px;">
+            <form action="{{ route('books.search') }}" method="GET" id="book-search-form"
+                class="d-flex flex-grow-1 mx-lg-4 my-2 my-lg-0 position-relative"
+                style="max-width: 500px;" autocomplete="off">
                 <div class="input-group shadow-sm rounded-pill overflow-hidden border w-100">
-                    <input type="text" name="keyword" class="form-control border-0 px-3 py-2 shadow-none"
-                        placeholder="Tìm kiếm sách, tác giả, thể loại..." value="{{ request('keyword') }}"
-                        aria-label="Tìm kiếm sách" required>
+                    <input type="search" name="keyword" id="book-search-input"
+                        class="form-control border-0 px-3 py-2 shadow-none"
+                        placeholder="Tìm sách, tác giả, ISBN, nhà xuất bản..." value="{{ request('keyword', request('q')) }}"
+                        role="combobox" aria-label="Tìm kiếm sách" aria-autocomplete="list" aria-haspopup="listbox"
+                        aria-controls="book-search-suggestions" aria-expanded="false" required>
                     <button class="btn btn-warning px-3 border-0 d-flex align-items-center justify-content-center"
                         type="submit" id="button-search">
                         <i class="bi bi-search fs-5 text-dark"></i>
                     </button>
                 </div>
+                <div id="book-search-suggestions" class="list-group position-absolute start-0 top-100 w-100 shadow d-none"
+                    role="listbox" aria-label="Gợi ý sách" style="z-index: 1050; max-height: 360px; overflow-y: auto;"></div>
             </form>
-        </div>
+</div>
+
+@push('scripts')
+    <script>
+        (() => {
+            const form = document.getElementById('book-search-form');
+            const input = document.getElementById('book-search-input');
+            const list = document.getElementById('book-search-suggestions');
+
+            if (!form || !input || !list) {
+                return;
+            }
+
+            const endpoint = @json(route('books.search.suggestions'));
+            let debounceTimer;
+            let abortController;
+            let activeIndex = -1;
+
+            const closeSuggestions = () => {
+                list.replaceChildren();
+                list.classList.add('d-none');
+                input.setAttribute('aria-expanded', 'false');
+                input.removeAttribute('aria-activedescendant');
+                activeIndex = -1;
+            };
+
+            const setActiveIndex = (index) => {
+                const options = list.querySelectorAll('[role="option"]');
+
+                if (options.length === 0) {
+                    return;
+                }
+
+                activeIndex = (index + options.length) % options.length;
+                options.forEach((option, optionIndex) => {
+                    const isActive = optionIndex === activeIndex;
+                    option.classList.toggle('active', isActive);
+                    option.setAttribute('aria-selected', String(isActive));
+                });
+                input.setAttribute('aria-activedescendant', options[activeIndex].id);
+            };
+
+            const renderSuggestions = (suggestions) => {
+                list.replaceChildren();
+
+                suggestions.forEach((suggestion) => {
+                    const option = document.createElement('a');
+                    option.href = suggestion.url;
+                    option.id = `book-search-option-${suggestion.id}`;
+                    option.className = 'list-group-item list-group-item-action d-flex align-items-center gap-3 py-2';
+                    option.setAttribute('role', 'option');
+                    option.setAttribute('aria-selected', 'false');
+
+                    if (suggestion.cover) {
+                        const cover = document.createElement('img');
+                        cover.src = suggestion.cover;
+                        cover.alt = '';
+                        cover.width = 42;
+                        cover.height = 56;
+                        cover.className = 'rounded object-fit-cover flex-shrink-0';
+                        option.append(cover);
+                    }
+
+                    const details = document.createElement('span');
+                    details.className = 'd-flex flex-column text-truncate';
+
+                    const title = document.createElement('strong');
+                    title.className = 'text-truncate';
+                    title.textContent = suggestion.title;
+                    details.append(title);
+
+                    const metadata = [suggestion.authors, suggestion.publisher, suggestion.isbn ? `ISBN ${suggestion.isbn}` : null]
+                        .filter(Boolean)
+                        .join(' · ');
+                    if (metadata) {
+                        const subtitle = document.createElement('small');
+                        subtitle.className = 'text-muted text-truncate';
+                        subtitle.textContent = metadata;
+                        details.append(subtitle);
+                    }
+
+                    option.append(details);
+                    list.append(option);
+                });
+
+                list.classList.toggle('d-none', suggestions.length === 0);
+                input.setAttribute('aria-expanded', String(suggestions.length > 0));
+                input.removeAttribute('aria-activedescendant');
+                activeIndex = -1;
+            };
+
+            input.addEventListener('input', () => {
+                window.clearTimeout(debounceTimer);
+                abortController?.abort();
+
+                const keyword = input.value.trim();
+                if (keyword.length < 2) {
+                    closeSuggestions();
+                    return;
+                }
+
+                debounceTimer = window.setTimeout(async () => {
+                    abortController = new AbortController();
+                    const url = new URL(endpoint);
+                    url.searchParams.set('keyword', keyword);
+
+                    try {
+                        const response = await fetch(url, {
+                            headers: { Accept: 'application/json' },
+                            signal: abortController.signal,
+                        });
+
+                        if (!response.ok) {
+                            closeSuggestions();
+                            return;
+                        }
+
+                        const suggestions = await response.json();
+                        if (input.value.trim() === keyword) {
+                            renderSuggestions(suggestions);
+                        }
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            closeSuggestions();
+                        }
+                    }
+                }, 250);
+            });
+
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'ArrowDown' && !list.classList.contains('d-none')) {
+                    event.preventDefault();
+                    setActiveIndex(activeIndex + 1);
+                } else if (event.key === 'ArrowUp' && !list.classList.contains('d-none')) {
+                    event.preventDefault();
+                    setActiveIndex(activeIndex < 0 ? list.children.length - 1 : activeIndex - 1);
+                } else if (event.key === 'Enter' && activeIndex >= 0) {
+                    event.preventDefault();
+                    list.querySelectorAll('[role="option"]')[activeIndex]?.click();
+                } else if (event.key === 'Escape') {
+                    closeSuggestions();
+                }
+            });
+
+            document.addEventListener('click', (event) => {
+                if (!form.contains(event.target)) {
+                    closeSuggestions();
+                }
+            });
+        })();
+    </script>
+@endpush
     </div>
 </nav>
 
@@ -185,6 +341,16 @@
                             @empty
                                 <p class="text-muted small text-center py-4 mb-0">Bạn chưa có thông báo thanh toán.</p>
                             @endforelse
+                            @foreach ($bookAvailabilityNotifications as $availabilityNotification)
+                                <a href="{{ route('books.show', $availabilityNotification->data['book_id']) }}"
+                                    class="notification-item d-block p-2 mb-2 border-bottom text-decoration-none text-dark">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <span class="badge bg-primary">Sách có hàng</span>
+                                        <small class="text-muted">{{ $availabilityNotification->created_at->diffForHumans() }}</small>
+                                    </div>
+                                    <p class="mb-0 small">{{ $availabilityNotification->data['message'] }}</p>
+                                </a>
+                            @endforeach
                         </div>
 
                         <!-- Tab Đơn hàng -->

@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\KhoHang;
 use App\Models\Sach;
 use App\Models\TheLoai;
+use App\Services\AdminActionLogger;
+use App\Services\StockAvailabilityNotifier;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,21 +18,23 @@ use Illuminate\Validation\ValidationException;
 class InventoryController extends Controller
 {
     /**
-     * Danh sách kho hàng, tự động khởi tạo bản ghi kho nếu chưa có,
+     * Danh sách kho hàng, tự động khởi tạo bản ghi kho cho nhân viên có quyền sửa nếu chưa có,
      * hỗ trợ đầy đủ các bộ lọc tìm kiếm và phân trang.
      */
     public function index(Request $request): View
     {
         // 1. Tự động kiểm tra và khởi tạo bản ghi kho cho tất cả sách chưa có
-        $sachChuaCoKho = Sach::whereDoesntHave('khoHang')->get();
-        foreach ($sachChuaCoKho as $sach) {
-            KhoHang::firstOrCreate(
-                ['id_sach' => $sach->id],
-                [
-                    'so_luong_ton' => 0,
-                    'nguong_canh_bao' => 5,
-                ]
-            );
+        if ($request->user()->hasPermission('inventory.update')) {
+            $sachChuaCoKho = Sach::whereDoesntHave('khoHang')->get();
+            foreach ($sachChuaCoKho as $sach) {
+                KhoHang::firstOrCreate(
+                    ['id_sach' => $sach->id],
+                    [
+                        'so_luong_ton' => 0,
+                        'nguong_canh_bao' => 5,
+                    ]
+                );
+            }
         }
 
         // 2. Validate dữ liệu đầu vào của bộ lọc
@@ -115,8 +119,12 @@ class InventoryController extends Controller
     /**
      * Cập nhật số lượng tồn kho, nhập hàng nhanh hoặc điều chỉnh vị trí kho (Khu vực/Kệ/Ô).
      */
-    public function update(Request $request, string $id): RedirectResponse
-    {
+    public function update(
+        Request $request,
+        string $id,
+        StockAvailabilityNotifier $stockNotifier,
+        AdminActionLogger $actionLogger,
+    ): RedirectResponse {
         $request->validate([
             'so_luong_ton' => ['nullable', 'integer', 'min:0'],
             'so_luong_nhap' => ['nullable', 'integer', 'min:1'],
@@ -127,11 +135,22 @@ class InventoryController extends Controller
         ]);
 
         $isReceivingStock = $request->filled('so_luong_nhap');
+        if ($isReceivingStock && ! $request->user()->hasPermission('inventory.import')) {
+            abort(403, 'Bạn không có quyền nhập thêm hàng.');
+        }
 
-        $stock = DB::transaction(function () use ($request, $id, $isReceivingStock): KhoHang {
+        $previousValues = [];
+
+        $stock = DB::transaction(function () use ($request, $id, $isReceivingStock, &$previousValues): KhoHang {
             $stock = KhoHang::whereKey($id)
                 ->lockForUpdate()
                 ->firstOrFail();
+            $previousValues = [
+                'so_luong_ton' => (int) $stock->so_luong_ton,
+                'khu_vuc' => $stock->khu_vuc,
+                'ke_hang' => $stock->ke_hang,
+                'o_chua' => $stock->o_chua,
+            ];
 
             if ($isReceivingStock) {
                 $stock->so_luong_ton += (int) $request->input('so_luong_nhap');
@@ -177,6 +196,25 @@ class InventoryController extends Controller
 
             return $stock;
         });
+
+        $stockNotifier->notifyIfAvailable((int) $stock->id_sach);
+        $actionLogger->log(
+            $request,
+            $isReceivingStock ? 'inventory.stock_received' : 'inventory.adjusted',
+            'kho_hang',
+            $stock->id,
+            [
+                'id_sach' => $stock->id_sach,
+                'before' => $previousValues,
+                'after' => [
+                    'so_luong_ton' => (int) $stock->so_luong_ton,
+                    'khu_vuc' => $stock->khu_vuc,
+                    'ke_hang' => $stock->ke_hang,
+                    'o_chua' => $stock->o_chua,
+                ],
+                'so_luong_nhap' => $isReceivingStock ? (int) $request->input('so_luong_nhap') : null,
+            ],
+        );
 
         if ($isReceivingStock) {
             return redirect()->back()->with(

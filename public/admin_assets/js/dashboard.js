@@ -44,15 +44,13 @@ document.addEventListener('DOMContentLoaded', function () {
     // -----------------------------------------------------------------
     const revenueChartEl = document.querySelector('#revenue-chart');
     if (revenueChartEl) {
+        const revenueLabels = (revenueChartEl.dataset.labels || '').split(',');
+        const revenueValues = (revenueChartEl.dataset.values || '').split(',').map(Number);
         const revenueChartOptions = {
             series: [
                 {
-                    name: 'Income',
-                    data: [44, 55, 41, 67, 52, 70, 61, 85]
-                },
-                {
-                    name: 'Expenses',
-                    data: [23, 33, 30, 48, 34, 45, 40, 45]
+                    name: 'Doanh thu đã thanh toán',
+                    data: revenueValues
                 }
             ],
             chart: {
@@ -67,7 +65,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
                 fontFamily: 'Plus Jakarta Sans, sans-serif'
             },
-            colors: ['#072F1F', '#B4F105'], // Dark Green (Income), Lime Green (Expenses)
+            colors: ['#072F1F'],
             states: {
                 hover: {
                     filter: {
@@ -114,7 +112,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             },
             xaxis: {
-                categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
+                categories: revenueLabels,
                 labels: {
                     style: {
                         colors: '#6C7E75',
@@ -140,7 +138,7 @@ document.addEventListener('DOMContentLoaded', function () {
             tooltip: {
                 y: {
                     formatter: function (val) {
-                        return "$ " + val + ".000";
+                        return new Intl.NumberFormat('vi-VN').format(val) + ' đ';
                     }
                 },
                 theme: 'dark'

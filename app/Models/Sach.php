@@ -27,6 +27,15 @@ class Sach extends Model
         'gia_von',
         'gia_khuyen_mai',
         'ma_isbn',
+        'so_trang',
+        'loai_bia',
+        'khoi_luong_gram',
+        'chieu_rong_mm',
+        'chieu_cao_mm',
+        'do_day_mm',
+        'ngon_ngu',
+        'lan_tai_ban',
+        'nha_cung_cap',
         'anh_bia',
         'mo_ta',
         'nam_xuat_ban',
@@ -34,6 +43,18 @@ class Sach extends Model
         'ban_chay',
         'dang_hoat_dong',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'so_trang' => 'integer',
+            'khoi_luong_gram' => 'integer',
+            'lan_tai_ban' => 'integer',
+            'chieu_rong_mm' => 'decimal:2',
+            'chieu_cao_mm' => 'decimal:2',
+            'do_day_mm' => 'decimal:2',
+        ];
+    }
 
     public function getAnhBiaUrlAttribute(): ?string
     {
@@ -96,5 +117,16 @@ class Sach extends Model
     public function danhGia(): HasMany
     {
         return $this->hasMany(DanhGiaSach::class, 'id_sach');
+    }
+
+    public function nguoiDungYeuThich(): BelongsToMany
+    {
+        return $this->belongsToMany(NguoiDung::class, 'sach_yeu_thich', 'id_sach', 'id_nguoi_dung')
+            ->withPivot('ngay_tao');
+    }
+
+    public function theoDoiHang(): HasMany
+    {
+        return $this->hasMany(TheoDoiHang::class, 'id_sach');
     }
 }

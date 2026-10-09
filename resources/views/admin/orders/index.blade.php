@@ -7,7 +7,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h3 class="fw-bold mb-1">Quản lý Đơn hàng</h3>
-                <p class="text-muted mb-0">Danh sách và trạng thái xử lý đơn hàng</p>
+                <p class="text-muted mb-0">Theo dõi khách hàng, trạng thái xử lý và giao nhận</p>
             </div>
         </div>
 
@@ -21,25 +21,11 @@
         <form action="{{ route('admin.orders.index') }}" method="GET" class="card border mb-4">
             <div class="card-body">
                 <div class="row g-3 align-items-end">
-                    <div class="col-sm-6 col-lg-2">
-                        <label for="sort_total" class="form-label small fw-semibold">Sắp xếp tổng tiền</label>
-                        <select id="sort_total" name="sort_total" class="form-select form-select-sm">
-                            <option value="">Ngày đặt mới nhất</option>
-                            <option value="desc" @selected(request('sort_total') === 'desc')>Giá từ cao đến thấp</option>
-                            <option value="asc" @selected(request('sort_total') === 'asc')>Giá từ thấp đến cao</option>
-                        </select>
+                    <div class="col-sm-6 col-xl-4">
+                        <label for="search" class="form-label small fw-semibold">Tìm đơn hàng</label>
+                        <input id="search" type="search" name="search" value="{{ request('search') }}" class="form-control form-control-sm" placeholder="Mã đơn, người nhận, SĐT hoặc email">
                     </div>
-                    <div class="col-sm-6 col-lg-2">
-                        <label for="phuong_thuc_thanh_toan" class="form-label small fw-semibold">Thanh toán</label>
-                        <select id="phuong_thuc_thanh_toan" name="phuong_thuc_thanh_toan" class="form-select form-select-sm">
-                            <option value="">Tất cả phương thức</option>
-                            <option value="COD" @selected(request('phuong_thuc_thanh_toan') === 'COD')>COD</option>
-                            <option value="VNPay" @selected(request('phuong_thuc_thanh_toan') === 'VNPay')>Chuyển khoản / thẻ (VNPay)</option>
-                            <option value="MoMo" @selected(request('phuong_thuc_thanh_toan') === 'MoMo')>Ví điện tử MoMo</option>
-                            <option value="BankTransfer" @selected(request('phuong_thuc_thanh_toan') === 'BankTransfer')>Chuyển khoản VietQR</option>
-                        </select>
-                    </div>
-                    <div class="col-sm-6 col-lg-2">
+                    <div class="col-sm-6 col-xl-2">
                         <label for="trang_thai" class="form-label small fw-semibold">Trạng thái đơn</label>
                         <select id="trang_thai" name="trang_thai" class="form-select form-select-sm">
                             <option value="">Tất cả trạng thái</option>
@@ -50,16 +36,40 @@
                             <option value="da_huy" @selected(request('trang_thai') === 'da_huy')>Đã hủy</option>
                         </select>
                     </div>
-                    <div class="col-sm-6 col-lg-2">
-                        <label for="date_from" class="form-label small fw-semibold">Từ ngày</label>
+                    <div class="col-sm-6 col-xl-2">
+                        <label for="don_vi_van_chuyen" class="form-label small fw-semibold">Đơn vị vận chuyển</label>
+                        <select id="don_vi_van_chuyen" name="don_vi_van_chuyen" class="form-select form-select-sm">
+                            <option value="">Tất cả đơn vị</option>
+                            <option value="GHN" @selected(request('don_vi_van_chuyen') === 'GHN')>GHN</option>
+                            <option value="GHTK" @selected(request('don_vi_van_chuyen') === 'GHTK')>GHTK</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6 col-xl-2">
+                        <label for="ngoai_le" class="form-label small fw-semibold">Tình trạng giao</label>
+                        <select id="ngoai_le" name="ngoai_le" class="form-select form-select-sm">
+                            <option value="">Tất cả tình trạng</option>
+                            <option value="giao_that_bai" @selected(request('ngoai_le') === 'giao_that_bai')>Giao thất bại</option>
+                            <option value="rto_chuyen_hoan" @selected(request('ngoai_le') === 'rto_chuyen_hoan')>Chuyển hoàn</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6 col-xl-2">
+                        <label for="sort_total" class="form-label small fw-semibold">Sắp xếp tổng đơn</label>
+                        <select id="sort_total" name="sort_total" class="form-select form-select-sm">
+                            <option value="">Ngày đặt mới nhất</option>
+                            <option value="desc" @selected(request('sort_total') === 'desc')>Giá từ cao đến thấp</option>
+                            <option value="asc" @selected(request('sort_total') === 'asc')>Giá từ thấp đến cao</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6 col-xl-2">
+                        <label for="date_from" class="form-label small fw-semibold">Đặt từ ngày</label>
                         <input id="date_from" type="date" name="date_from" value="{{ request('date_from') }}" class="form-control form-control-sm">
                     </div>
-                    <div class="col-sm-6 col-lg-2">
+                    <div class="col-sm-6 col-xl-2">
                         <label for="date_to" class="form-label small fw-semibold">Đến ngày</label>
                         <input id="date_to" type="date" name="date_to" value="{{ request('date_to') }}" class="form-control form-control-sm">
                     </div>
-                    <div class="col-sm-6 col-lg-2 d-flex gap-2">
-                        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">Lọc dữ liệu</button>
+                    <div class="col-sm-6 col-xl-3 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">Lọc đơn hàng</button>
                         <a href="{{ route('admin.orders.index') }}" class="btn btn-outline-secondary btn-sm">Xóa lọc</a>
                     </div>
                 </div>
@@ -75,8 +85,8 @@
                             <tr>
                                 <th class="ps-3" style="width: 110px;">Mã đơn</th>
                                 <th>Khách hàng</th>
-                                <th>Tổng tiền</th>
-                                <th>Phương thức</th>
+                                <th>Tổng đơn</th>
+                                <th>Vận chuyển</th>
                                 <th>Trạng thái</th>
                                 <th>Ngày đặt</th>
                                 <th class="text-end pe-3">Thao tác</th>
@@ -91,16 +101,26 @@
                                             {{ $order->nguoiDung->ho_ten ?? ($order->ten_nguoi_nhan ?? 'Khách lẻ') }}</div>
                                         <small class="text-muted">{{ $order->sdt_nguoi_nhan ?? '' }}</small>
                                     </td>
-                                    <td class="fw-bold text-danger">
-                                        {{ number_format($order->tong_tien ?? 0, 0, ',', '.') }} đ
+                                    <td>
+                                        <div class="fw-bold text-danger">
+                                            {{ number_format($order->thanh_tien ?? $order->thanhToan?->so_tien ?? $order->tong_tien ?? 0, 0, ',', '.') }} đ
+                                        </div>
+                                        <small class="text-muted d-block">
+                                            Tạm tính: {{ number_format($order->tong_tien ?? 0, 0, ',', '.') }} đ
+                                        </small>
+                                        @if (($order->so_tien_giam_gia ?? 0) > 0)
+                                            <small class="text-success d-block">
+                                                Giảm: -{{ number_format($order->so_tien_giam_gia, 0, ',', '.') }} đ
+                                            </small>
+                                        @endif
                                     </td>
                                     <td>
-                                        @php
-                                            $paymentMethod = $order->thanhToan->phuong_thuc_thanh_toan ?? 'COD';
-                                        @endphp
-                                        <span class="badge {{ $paymentMethod === 'MoMo' ? 'bg-warning text-dark' : ($paymentMethod === 'VNPay' ? 'bg-info text-dark' : 'bg-secondary-subtle text-secondary') }}">
-                                            {{ $paymentMethod === 'MoMo' ? 'Ví MoMo' : ($paymentMethod === 'VNPay' ? 'VNPay' : 'COD') }}
-                                        </span>
+                                        @if ($order->don_vi_van_chuyen || $order->ma_van_don)
+                                            <div class="fw-semibold">{{ $order->don_vi_van_chuyen ?: 'Chưa chọn hãng' }}</div>
+                                            <small class="text-muted">{{ $order->ma_van_don ?: 'Chưa có mã vận đơn' }}</small>
+                                        @else
+                                            <span class="text-muted">Chưa tạo vận đơn</span>
+                                        @endif
                                     </td>
                                     <td>
                                         @switch($order->trang_thai)
@@ -134,6 +154,7 @@
                                             <a href="{{ route('admin.orders.show', $order->id) }}" class="btn btn-sm btn-outline-dark">
                                                 <i class="bi bi-eye"></i> Chi tiết
                                             </a>
+                                            @if (auth()->user()->hasPermission('orders.status.update'))
                                             <form action="{{ route('admin.orders.updateStatus', $order->id) }}" method="POST" class="d-flex gap-1">
                                                 @csrf
                                                 @method('PUT')
@@ -146,6 +167,7 @@
                                                 </select>
                                                 <button type="submit" class="btn btn-sm btn-outline-primary" title="Cập nhật trạng thái"><i class="bi bi-check2"></i></button>
                                             </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>

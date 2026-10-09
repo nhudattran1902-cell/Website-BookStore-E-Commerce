@@ -21,6 +21,9 @@ class AllTableSeeder extends Seeder
         // 1. Tạo Vai trò (Roles)
         $roleAdmin = VaiTro::firstOrCreate(['ten_vai_tro' => 'admin'], ['mo_ta' => 'Quản trị hệ thống']);
         $roleCustomer = VaiTro::firstOrCreate(['ten_vai_tro' => 'customer'], ['mo_ta' => 'Khách hàng mua sách']);
+        VaiTro::firstOrCreate(['ten_vai_tro' => 'cskh'], ['mo_ta' => 'Nhân viên chăm sóc khách hàng']);
+        VaiTro::firstOrCreate(['ten_vai_tro' => 'nhan_vien_kho'], ['mo_ta' => 'Nhân viên quản lý kho']);
+        VaiTro::firstOrCreate(['ten_vai_tro' => 'ke_toan'], ['mo_ta' => 'Nhân viên kế toán']);
 
         // 2. Tạo Tài khoản Người dùng (Admin & Customer)
         $admin = NguoiDung::firstOrCreate(
